@@ -11,7 +11,7 @@ namespace MyToolkit.Services.Net;
 public static class ServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers <see cref="ApiService"/> and its full pipeline:
+    /// Registers <see cref="ApiService"/> (both throwing and non-throwing Try* surfaces) and its full pipeline:
     /// <list type="bullet">
     /// <item>the primary named client with the chain <c>AuthHandler → RefreshTokenHandler → HttpClient</c>;</item>
     /// <item>a clean "{name}-refresh" client (same BaseAddress, no handlers) used only to refresh tokens;</item>
@@ -50,11 +50,6 @@ public static class ServiceCollectionExtensions
         services.AddHttpClient(options.RefreshHttpClientName, configureClient);
 
         services.AddSingleton<ApiService>();
-
-        // The non-throwing surface over the same ApiService, for apps that consume
-        // Result<T> (e.g. KurdishConnect). Apps that use the throwing ApiService directly
-        // can ignore it.
-        services.TryAddSingleton<IResultApiService, ResultApiService>();
         return services;
     }
 }

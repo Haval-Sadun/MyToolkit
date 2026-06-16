@@ -2,7 +2,7 @@ namespace MyToolkit.Services.Auth;
 
 /// <summary>
 /// The shape returned by a typical login/register endpoint: a JWT pair plus the authenticated
-/// user. Generic over the app's user model so the shared <see cref="RestAuthServiceBase{TUser}"/>
+/// user. Generic over the app's user model so the shared <see cref="AuthServiceBase{TUser}"/>
 /// can parse it without knowing the concrete type. Field names map to the backend's snake_case
 /// (<c>access</c>, <c>refresh</c>, <c>user</c>) via the app's JSON options.
 /// </summary>
