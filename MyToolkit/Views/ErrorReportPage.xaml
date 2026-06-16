@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="MyToolkit.Views.ErrorReportPage"
+             BackgroundColor="#131315">
+
+    <Grid RowDefinitions="Auto,*,Auto" Padding="20,48,20,24" RowSpacing="16">
+
+        <!-- Header -->
+        <VerticalStackLayout Grid.Row="0" Spacing="6">
+            <Label x:Name="TitleLabel"
+                   FontSize="22" FontAttributes="Bold" TextColor="#FF3366" />
+            <Label x:Name="SummaryLabel"
+                   FontSize="15" TextColor="#E2E8F0" LineBreakMode="WordWrap" />
+            <Label x:Name="TraceLabel"
+                   FontSize="12" TextColor="#94A3B8" />
+        </VerticalStackLayout>
+
+        <!-- Full, scrollable, monospace detail (LTR — it's technical text) -->
+        <Border Grid.Row="1" Stroke="#1E293B" StrokeThickness="1"
+                BackgroundColor="#0B0B0D" StrokeShape="RoundRectangle 12">
+            <ScrollView Padding="12" FlowDirection="LeftToRight">
+                <Label x:Name="DetailLabel"
+                       FontFamily="JetBrainsMono" FontSize="12"
+                       TextColor="#CBD5E1" LineBreakMode="CharacterWrap" />
+            </ScrollView>
+        </Border>
+
+        <!-- Actions -->
+        <Grid Grid.Row="2" ColumnDefinitions="*,*" ColumnSpacing="12">
+            <Button Grid.Column="0" x:Name="CopyButton"
+                    BackgroundColor="#1E293B" TextColor="#BBFF00"
+                    Clicked="OnCopyClicked" />
+            <Button Grid.Column="1" x:Name="CloseButton"
+                    BackgroundColor="#BBFF00" TextColor="#131315"
+                    Clicked="OnCloseClicked" />
+        </Grid>
+    </Grid>
+</ContentPage>
