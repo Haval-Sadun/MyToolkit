@@ -3,23 +3,10 @@ using System.Net;
 namespace MyToolkit.Services.Errors;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// The error model in one file: the severity scale, the app-agnostic error contract
-// (IApiError) and its primary implementation (ApiException), plus AppException for
-// app-raised failures. ErrorSeverity is shared by both exception types, so it leads.
+// The error model in one file: the app-agnostic error contract (IApiError) and its
+// primary implementation (ApiException), plus AppException for app-raised failures.
 // All of these flow into ErrorHandler.
 // ─────────────────────────────────────────────────────────────────────────────
-
-/// <summary>
-/// Decides how the central <see cref="ErrorHandler"/> reacts to an exception.
-/// </summary>
-public enum ErrorSeverity
-{
-    /// <summary>Expected/recoverable (validation, connectivity). Logged only.</summary>
-    Minor,
-
-    /// <summary>Unexpected failure. Logged AND shown on the full report screen.</summary>
-    Important
-}
 
 /// <summary>
 /// App-agnostic view of a backend error envelope. Lets toolkit types (e.g. a
@@ -64,8 +51,6 @@ public class ApiException : Exception, IApiError
     public string? ServerTraceId { get; }
     public string? ServerStackTrace { get; }
     public string RawBody { get; }
-    public ErrorSeverity Severity { get; }
-
     public ApiException(
         HttpStatusCode statusCode,
         string method,
@@ -74,8 +59,7 @@ public class ApiException : Exception, IApiError
         string? userMessage,
         string? serverCode,
         string? serverTraceId,
-        string? serverStackTrace,
-        ErrorSeverity severity)
+        string? serverStackTrace)
         : base(string.IsNullOrWhiteSpace(userMessage)
             ? $"API {(int)statusCode} {statusCode}"
             : userMessage)
@@ -87,7 +71,6 @@ public class ApiException : Exception, IApiError
         ServerCode = serverCode;
         ServerTraceId = serverTraceId;
         ServerStackTrace = serverStackTrace;
-        Severity = severity;
     }
 
     // IApiError — StatusCode name-clashes the HttpStatusCode property, so map explicitly.
@@ -96,30 +79,24 @@ public class ApiException : Exception, IApiError
 }
 
 /// <summary>
-/// Base for application-raised exceptions. Carries a user-facing message and a
-/// <see cref="ErrorSeverity"/> that tells the central error handler whether to open
-/// the full report screen or just log.
+/// Base for application-raised exceptions. Carries a user-facing message that is shown
+/// in the error toast. The central <see cref="ErrorHandler"/> always shows the full
+/// report on demand — no severity classification needed.
 /// </summary>
 /// <example>
 /// Throw it from app logic when you want the central handler to take over:
 /// <code>
-/// throw new AppException(_text.Get("Profile_SaveFailed"), ErrorSeverity.Important);
+/// throw new AppException(_text.Get("Profile_SaveFailed"));
 /// </code>
 /// </example>
 public class AppException : Exception
 {
-    public ErrorSeverity Severity { get; }
-
     /// <summary>Message safe to show the user (already localized by the caller).</summary>
     public string UserMessage { get; }
 
-    public AppException(
-        string userMessage,
-        ErrorSeverity severity = ErrorSeverity.Minor,
-        Exception? inner = null)
+    public AppException(string userMessage, Exception? inner = null)
         : base(userMessage, inner)
     {
         UserMessage = userMessage;
-        Severity = severity;
     }
 }

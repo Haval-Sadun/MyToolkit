@@ -22,11 +22,6 @@ public sealed class ApiExceptionFactory
     {
         var body = await response.Content.ReadAsStringAsync(cancellationToken);
         string? message = null, code = null, traceId = null, stack = null;
-        // 5xx is important by default; 4xx is user-correctable (minor) unless the
-        // server explicitly says otherwise.
-        var severity = (int)response.StatusCode >= 500
-            ? ErrorSeverity.Important
-            : ErrorSeverity.Minor;
 
         try
         {
@@ -40,13 +35,8 @@ public sealed class ApiExceptionFactory
                 if (err.TryGetProperty("code", out var c)) code = c.GetString();
                 if (err.TryGetProperty("trace_id", out var t)) traceId = t.GetString();
                 if (err.TryGetProperty("stack_trace", out var s)) stack = s.GetString();
-                if (err.TryGetProperty("severity", out var sv))
-                    severity = sv.GetString() == "important"
-                        ? ErrorSeverity.Important
-                        : ErrorSeverity.Minor;
-                // The envelope "message" is generic ("Your request could not be
-                // processed."); "detail" carries the actionable text (field errors
-                // or the non_field_errors string). Prefer it for the user message.
+                // The envelope "message" is generic; "detail" carries the actionable text
+                // (field errors or the non_field_errors string). Prefer it for the user message.
                 if (err.TryGetProperty("detail", out var dd))
                 {
                     var flat = FlattenDetail(dd);
@@ -73,7 +63,7 @@ public sealed class ApiExceptionFactory
 
         return new ApiException(
             response.StatusCode, method, endpoint, body,
-            message, code, traceId, stack, severity);
+            message, code, traceId, stack);
     }
 
     /// <summary>

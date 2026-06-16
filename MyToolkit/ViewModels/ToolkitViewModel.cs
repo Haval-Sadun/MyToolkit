@@ -48,9 +48,8 @@ public abstract partial class ToolkitViewModel : ObservableObject, ILifecycleAwa
     /// opens the full error-report screen.
     /// </summary>
     /// <param name="errorMsg">Optional override for the inline message.</param>
-    /// <param name="severity">Force a severity; otherwise it's inferred.</param>
     /// <param name="context">Label for the log (defaults to the view-model name).</param>
-    protected async Task RunSafeAsync(Func<Task> action, string? errorMsg = null, ErrorSeverity? severity = null, string? context = null)
+    protected async Task RunSafeAsync(Func<Task> action, string? errorMsg = null, string? context = null)
     {
         if (IsBusy) 
             return;
@@ -70,7 +69,7 @@ public abstract partial class ToolkitViewModel : ObservableObject, ILifecycleAwa
             try
             {
                 await ServiceHelper.Get<ErrorHandler>()
-                    .HandleAsync(ex, severity, context ?? GetType().Name);
+                    .HandleAsync(ex, context ?? GetType().Name);
             }
             catch (Exception handlerEx)
             {

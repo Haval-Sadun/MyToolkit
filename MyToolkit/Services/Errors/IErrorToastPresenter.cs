@@ -1,23 +1,23 @@
 namespace MyToolkit.Services.Errors;
 
 /// <summary>
-/// App-supplied seam for showing a brief, non-blocking notification (a toast/floater)
-/// when the central <see cref="ErrorHandler"/> handles a <see cref="ErrorSeverity.Minor"/>
-/// error. The toolkit owns the <em>when</em> and the <em>text</em> (via
-/// <see cref="IErrorTextProvider"/>); each app supplies the <em>how</em> by delegating to
-/// whatever presenter it already has (e.g. <c>IPopupPresenter.FloaterAsync</c> or a
-/// CommunityToolkit <c>Toast</c>). This keeps the shared error pipeline decoupled from any
-/// one app's popup type. Registered as a DI singleton; defaults to
-/// <see cref="NoOpErrorToastPresenter"/> when an app supplies none.
+/// App-supplied seam for showing a brief, non-blocking error notification. The toolkit
+/// owns the <em>when</em> and the <em>text</em>; each app supplies the <em>how</em> by
+/// delegating to whatever presenter it already uses (e.g. UXDivers Floater, Snackbar).
+///
+/// When <paramref name="onDetails"/> is non-null the presenter should show a tappable
+/// action button (labelled <paramref name="detailsLabel"/>) that opens the full error
+/// report. When null, a plain non-interactive notification is shown.
 /// </summary>
 public interface IErrorToastPresenter
 {
-    /// <summary>Shows a transient, non-blocking notification. Must not throw.</summary>
-    Task ShowAsync(string title, string message);
+    /// <summary>Shows a transient, non-blocking error notification. Must not throw.</summary>
+    Task ShowAsync(string title, string message, Action? onDetails = null, string detailsLabel = "Details");
 }
 
 /// <summary>Fallback that shows nothing — used when an app registers no presenter.</summary>
 public sealed class NoOpErrorToastPresenter : IErrorToastPresenter
 {
-    public Task ShowAsync(string title, string message) => Task.CompletedTask;
+    public Task ShowAsync(string title, string message, Action? onDetails = null, string detailsLabel = "Details")
+        => Task.CompletedTask;
 }

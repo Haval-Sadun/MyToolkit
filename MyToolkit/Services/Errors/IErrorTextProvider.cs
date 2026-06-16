@@ -29,8 +29,11 @@ public interface IErrorTextProvider
     /// <summary>Inline message for request timeouts (e.g. <c>TaskCanceledException</c>).</summary>
     string TimeoutError { get; }
 
-    /// <summary>Title shown on the brief minor-error toast/floater (e.g. "Error").</summary>
+    /// <summary>Title shown on the brief error toast/floater (e.g. "Error").</summary>
     string ErrorToastTitle { get; }
+
+    /// <summary>Label for the action button on the error toast that opens the full report (e.g. "Details").</summary>
+    string ErrorDetailsButton => "Details";
 
     /// <summary>Renders the trace/timestamp sub-label (e.g. "Trace ID: {id} • {time}").</summary>
     string TraceLabel(string traceId, string timestampLocal);

@@ -4,11 +4,8 @@ using MyToolkit.Views;
 namespace MyToolkit.Services.Errors;
 
 /// <summary>
-/// A fully-rendered error report, ready to show on <c>ErrorReportPage</c> and to
-/// write to the log. <see cref="FullDetail"/> is the scrollable, copyable dump.
-/// User-facing chrome (title, buttons) comes from <see cref="IErrorTextProvider"/>,
-/// not from this data holder. Produced by <see cref="ErrorHandler"/>; app code rarely
-/// touches it directly.
+/// A fully-rendered error report, ready to show on <c>ErrorReportPage</c> and to write
+/// to the log. Produced by <see cref="ErrorHandler"/>; app code rarely touches it directly.
 /// </summary>
 public class ErrorReport
 {
@@ -16,23 +13,17 @@ public class ErrorReport
     public string Summary { get; set; } = string.Empty;
     public string FullDetail { get; set; } = string.Empty;
     public string TimestampLocal { get; set; } = string.Empty;
-    public string Severity { get; set; } = "minor";
 }
 
 /// <summary>
 /// Central exception sink. Every caught or unhandled exception flows through
-/// <see cref="HandleAsync"/>. Behaviour depends on severity:
+/// <see cref="HandleAsync"/>. Every error is handled the same way: logged with full
+/// detail, then shown as a brief non-blocking toast. The toast carries a tappable
+/// "Details" action that opens the full scrollable <see cref="ErrorReportPage"/> on demand
+/// (exception type, message, stack trace, inner-exception chain, server trace id / stack).
 ///
-///   • Minor     → logged AND a brief, non-blocking toast/floater is shown with a
-///                 friendly message (via the app's <see cref="IErrorToastPresenter"/>).
-///   • Important → logged AND a modal report screen is shown containing the full,
-///                 scrollable exception detail: type, message, stack trace with
-///                 line numbers, the complete inner-exception chain, and any
-///                 server-side trace id / stack returned by the backend.
-///
-/// In both cases the exception is logged with its full detail. User-facing copy
-/// comes from the app's <see cref="IErrorTextProvider"/>; the toast presenter is
-/// app-supplied (defaults to a no-op when none is registered).
+/// User-facing copy comes from the app's <see cref="IErrorTextProvider"/>; the toast
+/// presenter is app-supplied (defaults to a no-op when none is registered).
 /// </summary>
 public class ErrorHandler
 {
@@ -48,70 +39,63 @@ public class ErrorHandler
         _toast = toast ?? new NoOpErrorToastPresenter();
     }
 
-    public Task HandleAsync(Exception ex, ErrorSeverity? severity = null, string? context = null)
+    /// <summary>
+    /// Logs the exception and shows a toast with a "Details" button that opens the
+    /// full error report. Safe to call from any thread.
+    /// </summary>
+    public Task HandleAsync(Exception ex, string? context = null)
     {
-        var sev = severity ?? Classify(ex);
-        var report = Build(ex, sev, context);
-        LogReport(report, context);
-
-        return sev == ErrorSeverity.Important
-            ? ShowReportAsync(report)
-            : ShowToastAsync(FriendlyMessage(ex));
+        var report = Build(ex, context);
+        LogReport(report);
+        return ShowToastAsync(FriendlyMessage(ex), report);
     }
 
-    /// <summary>
-    /// Logs an exception and shows the user-facing surface for its severity
-    /// (Minor → toast, Important → modal report). Fire-and-forget convenience for
-    /// non-async call sites (event handlers, code-behind).
-    /// </summary>
-    public void Handle(Exception ex, string context) => _ = HandleAsync(ex, null, context);
+    /// <summary>Fire-and-forget convenience for event handlers and code-behind.</summary>
+    public void Handle(Exception ex, string context) => _ = HandleAsync(ex, context);
 
     /// <summary>
-    /// Logs a backend API error and shows its message as a brief toast. Use when a
-    /// non-throwing API surface returns an <see cref="IApiError"/> rather than an exception.
+    /// Shows a toast for a non-throwing API error (from a <see cref="Result{T}"/> failure).
+    /// A "Details" button is available so the user can inspect the full report.
     /// </summary>
     public void Handle(IApiError error, string context)
     {
         _logger.LogApiError(error, context);
-        _ = ShowToastAsync(error.Message);
+        var report = BuildFromApiError(error, context);
+        _ = ShowToastAsync(error.Message, report);
     }
 
-    /// <summary>Logs an exception with full detail but shows no UI (no toast, no report).</summary>
+    /// <summary>Logs with full detail but shows no UI. For unrecoverable background failures.</summary>
     public void HandleSilent(Exception ex, string context)
-        => LogReport(Build(ex, Classify(ex), context), context);
+        => LogReport(Build(ex, context));
 
-    private void LogReport(ErrorReport report, string? context)
-        => _logger.Log(report.Severity == "important" ? "ERROR" : "WARN",
-            $"{report.TraceId} {context}\n{report.FullDetail}");
+    // ── Internals ──────────────────────────────────────────────────────────────
 
-    /// <summary>Maps an exception to a friendly, localized one-line message for the toast.</summary>
+    private void LogReport(ErrorReport report)
+        => _logger.Log("ERROR", $"{report.TraceId}\n{report.FullDetail}");
+
     private string FriendlyMessage(Exception ex) => ex switch
     {
         AppException app when !string.IsNullOrWhiteSpace(app.UserMessage) => app.UserMessage,
-        ApiException api when !string.IsNullOrWhiteSpace(api.Message) => api.Message,
-        TaskCanceledException or OperationCanceledException => _text.TimeoutError,
-        HttpRequestException => _text.NetworkError,
-        _ => _text.UnexpectedError
+        ApiException api when !string.IsNullOrWhiteSpace(api.Message)    => api.Message,
+        TaskCanceledException or OperationCanceledException               => _text.TimeoutError,
+        HttpRequestException                                              => _text.NetworkError,
+        _                                                                 => _text.UnexpectedError
     };
 
-    private async Task ShowToastAsync(string message)
+    private async Task ShowToastAsync(string message, ErrorReport report)
     {
-        try { await _toast.ShowAsync(_text.ErrorToastTitle, message); }
+        try
+        {
+            await _toast.ShowAsync(
+                _text.ErrorToastTitle,
+                message,
+                onDetails: () => _ = ShowReportAsync(report),
+                detailsLabel: _text.ErrorDetailsButton);
+        }
         catch (Exception ex) { _logger.Log("ERROR", $"Failed to present error toast: {ex}"); }
     }
 
-    /// <summary>Default severity when the caller doesn't specify one.</summary>
-    private static ErrorSeverity Classify(Exception ex) => ex switch
-    {
-        ApiException api => api.Severity,
-        AppException app => app.Severity,
-        OperationCanceledException => ErrorSeverity.Minor,
-        // Connectivity is expected and recoverable, not a crash report.
-        HttpRequestException => ErrorSeverity.Minor,
-        _ => ErrorSeverity.Important
-    };
-
-    private ErrorReport Build(Exception ex, ErrorSeverity sev, string? context)
+    private ErrorReport Build(Exception ex, string? context)
     {
         var traceId = (ex as ApiException)?.ServerTraceId
                       ?? Guid.NewGuid().ToString("N")[..12];
@@ -119,7 +103,6 @@ public class ErrorHandler
         var sb = new StringBuilder();
         sb.AppendLine($"Trace ID : {traceId}");
         sb.AppendLine($"Time     : {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
-        sb.AppendLine($"Severity : {sev}");
         if (!string.IsNullOrWhiteSpace(context))
             sb.AppendLine($"Context  : {context}");
         sb.AppendLine();
@@ -131,22 +114,45 @@ public class ErrorHandler
 
         return new ErrorReport
         {
-            TraceId = traceId,
-            Severity = sev.ToString().ToLowerInvariant(),
-            Summary = summary,
-            TimestampLocal = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
-            FullDetail = sb.ToString()
+            TraceId          = traceId,
+            Summary          = summary,
+            TimestampLocal   = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+            FullDetail       = sb.ToString()
         };
     }
 
-    /// <summary>
-    /// Renders an exception and recurses through its inner-exception chain
-    /// (and every branch of an AggregateException), each with stack trace.
-    /// </summary>
+    private ErrorReport BuildFromApiError(IApiError error, string context)
+    {
+        var api = error as ApiException;
+        var traceId = api?.ServerTraceId ?? Guid.NewGuid().ToString("N")[..12];
+
+        var sb = new StringBuilder();
+        sb.AppendLine($"Trace ID : {traceId}");
+        sb.AppendLine($"Time     : {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+        sb.AppendLine($"Context  : {context}");
+        sb.AppendLine($"Status   : {error.StatusCode}");
+        if (!string.IsNullOrEmpty(error.ErrorCode)) sb.AppendLine($"Code     : {error.ErrorCode}");
+        sb.AppendLine($"Message  : {error.Message}");
+        if (api != null)
+        {
+            sb.AppendLine($"HTTP     : {api.Method} {api.Endpoint}");
+            if (!string.IsNullOrEmpty(api.RawBody))          sb.AppendLine($"Body     : {api.RawBody}");
+            if (!string.IsNullOrEmpty(api.ServerStackTrace)) sb.AppendLine($"\nServer stack trace:\n{api.ServerStackTrace}");
+        }
+
+        return new ErrorReport
+        {
+            TraceId        = traceId,
+            Summary        = error.Message,
+            TimestampLocal = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+            FullDetail     = sb.ToString()
+        };
+    }
+
     private static void AppendException(StringBuilder sb, Exception ex, int depth)
     {
         var indent = new string(' ', depth * 2);
-        var label = depth == 0 ? "Exception" : $"Inner exception (depth {depth})";
+        var label  = depth == 0 ? "Exception" : $"Inner exception (depth {depth})";
         sb.AppendLine($"{indent}── {label} ──");
         sb.AppendLine($"{indent}Type    : {ex.GetType().FullName}");
         sb.AppendLine($"{indent}Message : {ex.Message}");
@@ -154,9 +160,9 @@ public class ErrorHandler
         if (ex is ApiException api)
         {
             sb.AppendLine($"{indent}HTTP    : {api.Method} {api.Endpoint} → {(int)api.StatusCode} {api.StatusCode}");
-            if (!string.IsNullOrEmpty(api.ServerCode))    sb.AppendLine($"{indent}Code    : {api.ServerCode}");
-            if (!string.IsNullOrEmpty(api.ServerTraceId)) sb.AppendLine($"{indent}Server  : trace {api.ServerTraceId}");
-            if (!string.IsNullOrEmpty(api.RawBody))       sb.AppendLine($"{indent}Body    : {api.RawBody}");
+            if (!string.IsNullOrEmpty(api.ServerCode))      sb.AppendLine($"{indent}Code    : {api.ServerCode}");
+            if (!string.IsNullOrEmpty(api.ServerTraceId))   sb.AppendLine($"{indent}Server  : trace {api.ServerTraceId}");
+            if (!string.IsNullOrEmpty(api.RawBody))         sb.AppendLine($"{indent}Body    : {api.RawBody}");
             if (!string.IsNullOrEmpty(api.ServerStackTrace))
             {
                 sb.AppendLine($"{indent}Server stack trace:");
@@ -171,23 +177,14 @@ public class ErrorHandler
         }
 
         if (ex is AggregateException agg)
-        {
-            foreach (var inner in agg.InnerExceptions)
-            {
-                sb.AppendLine();
-                AppendException(sb, inner, depth + 1);
-            }
-        }
+            foreach (var inner in agg.InnerExceptions) { sb.AppendLine(); AppendException(sb, inner, depth + 1); }
         else if (ex.InnerException != null)
-        {
-            sb.AppendLine();
-            AppendException(sb, ex.InnerException, depth + 1);
-        }
+        { sb.AppendLine(); AppendException(sb, ex.InnerException, depth + 1); }
     }
 
     private async Task ShowReportAsync(ErrorReport report)
     {
-        if (_reportVisible) return;     // never stack report screens
+        if (_reportVisible) return;
         _reportVisible = true;
 
         await MainThread.InvokeOnMainThreadAsync(async () =>
@@ -196,11 +193,7 @@ public class ErrorHandler
             {
                 var nav = Application.Current?.Windows.FirstOrDefault()?.Page?.Navigation
                           ?? Shell.Current?.Navigation;
-                if (nav == null)
-                {
-                    _reportVisible = false;
-                    return;
-                }
+                if (nav == null) { _reportVisible = false; return; }
 
                 var page = new ErrorReportPage(report, _text);
                 page.Disappearing += (_, _) => _reportVisible = false;
