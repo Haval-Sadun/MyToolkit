@@ -49,6 +49,13 @@ public abstract class AuthServiceBase<TUser> : IAuthStateProvider where TUser : 
 
     public bool IsAuthenticated => _currentUser is not null;
 
+    /// <summary>
+    /// In-memory cache of the current access token. Set automatically after every successful
+    /// authentication and refresh. Useful for consumers (e.g. WebSocket URL builders) that need
+    /// the token synchronously without awaiting <see cref="ITokenStore"/>.
+    /// </summary>
+    public string? AccessToken { get; protected set; }
+
     protected AuthServiceBase(ApiService? api = null, ITokenStore? tokens = null)
     {
         Api = api;
@@ -148,6 +155,22 @@ public abstract class AuthServiceBase<TUser> : IAuthStateProvider where TUser : 
     protected virtual bool AcceptUser(TUser user) => true;
 
     /// <summary>
+    /// Called after a successful login or register — tokens are saved, <see cref="AccessToken"/>
+    /// is cached, and <see cref="CurrentUser"/> is set before this runs.
+    /// Override to add app-specific post-auth work (e.g. persisting the user to secure storage).
+    /// The default implementation is a no-op.
+    /// </summary>
+    protected virtual Task OnLoginSucceededAsync(TUser user) => Task.CompletedTask;
+
+    /// <summary>
+    /// Public login entry point. Posts <c>{ email, password }</c> to <see cref="LoginEndpoint"/>.
+    /// On success, tokens are stored, <see cref="AccessToken"/> is cached, <see cref="CurrentUser"/>
+    /// is set, and <see cref="OnLoginSucceededAsync"/> is called.
+    /// </summary>
+    public Task<Result<TUser>> Login(string email, string password)
+        => LoginCoreAsync(new { email, password });
+
+    /// <summary>
     /// POSTs <paramref name="requestBody"/> to the login endpoint.
     /// Returns a <see cref="Result{TUser}"/> — success carries the logged-in user,
     /// failure carries the API or transport error. Never throws.
@@ -177,7 +200,9 @@ public abstract class AuthServiceBase<TUser> : IAuthStateProvider where TUser : 
             return Result<TUser>.Fail(new SimpleApiError { Message = "Access denied.", ErrorCode = "ACCESS_DENIED", StatusCode = 403 });
 
         await Tokens!.SetTokensAsync(envelope.Access, envelope.Refresh);
+        AccessToken = envelope.Access;
         CurrentUser = envelope.User;
+        await OnLoginSucceededAsync(envelope.User);
         return Result<TUser>.Ok(envelope.User);
     }
 
@@ -200,6 +225,7 @@ public abstract class AuthServiceBase<TUser> : IAuthStateProvider where TUser : 
         }
 
         await Tokens.SetTokensAsync(res.Value.Access, res.Value.Refresh);
+        AccessToken = res.Value.Access;
         return true;
     }
 
