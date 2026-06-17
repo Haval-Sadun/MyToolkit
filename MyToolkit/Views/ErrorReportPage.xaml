@@ -1,39 +1,117 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             x:Class="MyToolkit.Views.ErrorReportPage"
-             BackgroundColor="#131315">
+<local:ToolkitPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+                   xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+                   xmlns:local="clr-namespace:MyToolkit.Views"
+                   xmlns:vm="clr-namespace:MyToolkit.ViewModels"
+                   x:Class="MyToolkit.Views.ErrorReportPage"
+                   x:DataType="vm:ErrorReportViewModel"
+                   BackgroundColor="{Binding Theme.PageBackground}">
 
-    <Grid RowDefinitions="Auto,*,Auto" Padding="20,48,20,24" RowSpacing="16">
+    <Grid RowDefinitions="Auto,Auto,Auto,*,Auto,Auto"
+          Padding="20,52,20,28" RowSpacing="0">
 
-        <!-- Header -->
-        <VerticalStackLayout Grid.Row="0" Spacing="6">
-            <Label x:Name="TitleLabel"
-                   FontSize="22" FontAttributes="Bold" TextColor="#FF3366" />
-            <Label x:Name="SummaryLabel"
-                   FontSize="15" TextColor="#E2E8F0" LineBreakMode="WordWrap" />
-            <Label x:Name="TraceLabel"
-                   FontSize="12" TextColor="#94A3B8" />
-        </VerticalStackLayout>
-
-        <!-- Full, scrollable, monospace detail (LTR — it's technical text) -->
-        <Border Grid.Row="1" Stroke="#1E293B" StrokeThickness="1"
-                BackgroundColor="#0B0B0D" StrokeShape="RoundRectangle 12">
-            <ScrollView Padding="12" FlowDirection="LeftToRight">
-                <Label x:Name="DetailLabel"
-                       FontFamily="JetBrainsMono" FontSize="12"
-                       TextColor="#CBD5E1" LineBreakMode="CharacterWrap" />
-            </ScrollView>
-        </Border>
-
-        <!-- Actions -->
-        <Grid Grid.Row="2" ColumnDefinitions="*,*" ColumnSpacing="12">
-            <Button Grid.Column="0" x:Name="CopyButton"
-                    BackgroundColor="#1E293B" TextColor="#BBFF00"
-                    Clicked="OnCopyClicked" />
-            <Button Grid.Column="1" x:Name="CloseButton"
-                    BackgroundColor="#BBFF00" TextColor="#131315"
+        <!-- ① Header: warning icon · title · ✕ close -->
+        <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,14">
+            <Label Grid.Column="0"
+                   Text="⚠" FontSize="22"
+                   TextColor="{Binding Theme.WarningIconColor}"
+                   VerticalOptions="Center" Margin="0,0,8,0" />
+            <Label Grid.Column="1"
+                   Text="{Binding Title}"
+                   FontSize="19" FontAttributes="Bold"
+                   TextColor="{Binding Theme.TitleColor}"
+                   VerticalOptions="Center" LineBreakMode="WordWrap" />
+            <Button Grid.Column="2"
+                    Text="✕" FontSize="15"
+                    TextColor="{Binding Theme.CloseIconColor}"
+                    BackgroundColor="Transparent"
+                    WidthRequest="36" HeightRequest="36"
+                    CornerRadius="18" Padding="0"
                     Clicked="OnCloseClicked" />
         </Grid>
+
+        <!-- ② Summary + trace -->
+        <VerticalStackLayout Grid.Row="1" Spacing="4" Margin="0,0,0,14">
+            <Label Text="{Binding Summary}"
+                   FontSize="14" LineBreakMode="WordWrap"
+                   TextColor="{Binding Theme.SummaryColor}" />
+            <Label Text="{Binding TraceInfo}"
+                   FontSize="11"
+                   TextColor="{Binding Theme.TraceColor}" />
+        </VerticalStackLayout>
+
+        <!-- ③ "What were you doing?" + description Entry -->
+        <VerticalStackLayout Grid.Row="2" Spacing="6" Margin="0,0,0,16">
+            <Label Text="{Binding WhatWereYouDoingLabel}"
+                   FontSize="13"
+                   TextColor="{Binding Theme.SectionLabelColor}" />
+            <Border StrokeThickness="1" StrokeShape="RoundRectangle 10"
+                    Stroke="{Binding Theme.InputBorderBrush}"
+                    BackgroundColor="{Binding Theme.InputBackground}"
+                    Padding="4,2">
+                <Entry Placeholder="{Binding DescriptionPlaceholder}"
+                       PlaceholderColor="{Binding Theme.TraceColor}"
+                       TextColor="{Binding Theme.InputTextColor}"
+                       BackgroundColor="{Binding Theme.InputBackground}"
+                       FontSize="13" Margin="4,0" />
+            </Border>
+        </VerticalStackLayout>
+
+        <!-- ④ Technical details: section header + scrollable monospace box -->
+        <Grid Grid.Row="3" RowDefinitions="Auto,*" RowSpacing="6" Margin="0,0,0,10">
+
+            <!-- [Copy]  Technical Error Details -->
+            <Grid Grid.Row="0" ColumnDefinitions="Auto,*">
+                <Button Grid.Column="0"
+                        Text="{Binding CopyLabel}"
+                        Command="{Binding CopyCommand}"
+                        BackgroundColor="{Binding Theme.CopyButtonBackground}"
+                        TextColor="{Binding Theme.CopyButtonTextColor}"
+                        FontSize="12" CornerRadius="8"
+                        HeightRequest="30" Padding="12,0" />
+                <Label Grid.Column="1"
+                       Text="{Binding TechnicalDetailsLabel}"
+                       TextColor="{Binding Theme.SectionLabelColor}"
+                       FontSize="13"
+                       VerticalOptions="Center" HorizontalOptions="End" />
+            </Grid>
+
+            <!-- Detail box — always LTR (technical text) -->
+            <Border Grid.Row="1"
+                    StrokeThickness="1" StrokeShape="RoundRectangle 10"
+                    Stroke="{Binding Theme.DetailBoxBorderBrush}"
+                    BackgroundColor="{Binding Theme.DetailBoxBackground}">
+                <ScrollView Padding="12" FlowDirection="LeftToRight">
+                    <Label Text="{Binding DetailText}"
+                           FontFamily="JetBrainsMono" FontSize="11"
+                           TextColor="{Binding Theme.DetailTextColor}"
+                           LineBreakMode="CharacterWrap" />
+                </ScrollView>
+            </Border>
+        </Grid>
+
+        <!-- ⑤ Branding badge -->
+        <HorizontalStackLayout Grid.Row="4"
+                               HorizontalOptions="Center"
+                               Margin="0,0,0,16">
+            <Border StrokeThickness="0" StrokeShape="RoundRectangle 14"
+                    BackgroundColor="{Binding Theme.BrandingBackground}"
+                    Padding="14,6">
+                <Label Text="{Binding BrandingText}"
+                       TextColor="{Binding Theme.BrandingTextColor}"
+                       FontSize="10" FontAttributes="Bold" CharacterSpacing="2" />
+            </Border>
+        </HorizontalStackLayout>
+
+        <!-- ⑥ Close button -->
+        <Button Grid.Row="5"
+                Text="{Binding CloseLabel}"
+                TextColor="{Binding Theme.SecondaryButtonTextColor}"
+                BackgroundColor="Transparent"
+                BorderColor="{Binding Theme.SecondaryButtonBorderColor}"
+                BorderWidth="1"
+                FontSize="14" CornerRadius="12" HeightRequest="50"
+                Clicked="OnCloseClicked" />
+
     </Grid>
-</ContentPage>
+</local:ToolkitPage>

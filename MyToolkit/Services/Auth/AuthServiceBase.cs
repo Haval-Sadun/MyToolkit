@@ -15,7 +15,7 @@ namespace MyToolkit.Services.Auth;
 /// <see cref="Result{TUser}"/> — never throw — so subclasses can expose any
 /// public signature they need.</para>
 /// </summary>
-public abstract class AuthServiceBase<TUser> where TUser : class
+public abstract class AuthServiceBase<TUser> : IAuthStateProvider where TUser : class
 {
     protected ApiService? Api { get; }
     protected ITokenStore? Tokens { get; }
@@ -25,14 +25,25 @@ public abstract class AuthServiceBase<TUser> where TUser : class
     /// <summary>Fires whenever <see cref="CurrentUser"/> changes (login, logout, profile refresh).</summary>
     public event EventHandler<TUser?>? UserChanged;
 
+    // IAuthStateProvider — fire on logged-in / logged-out transitions only (not on profile refreshes
+    // where the user was already non-null). Using explicit interface events keeps the public surface clean.
+    private EventHandler? _loggedIn;
+    private EventHandler? _loggedOut;
+    event EventHandler? IAuthStateProvider.LoggedIn  { add => _loggedIn  += value; remove => _loggedIn  -= value; }
+    event EventHandler? IAuthStateProvider.LoggedOut { add => _loggedOut += value; remove => _loggedOut -= value; }
+
     public TUser? CurrentUser
     {
         get => _currentUser;
         protected set
         {
+            var wasAuth = _currentUser is not null;
             if (ReferenceEquals(_currentUser, value)) return;
             _currentUser = value;
             UserChanged?.Invoke(this, value);
+            var isAuth = value is not null;
+            if (!wasAuth && isAuth)  _loggedIn?.Invoke(this,  EventArgs.Empty);
+            else if (wasAuth && !isAuth) _loggedOut?.Invoke(this, EventArgs.Empty);
         }
     }
 

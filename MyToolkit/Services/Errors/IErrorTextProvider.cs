@@ -1,40 +1,56 @@
 namespace MyToolkit.Services.Errors;
 
 /// <summary>
-/// Supplies the user-facing strings the toolkit error stack needs (report screen
-/// title, buttons, trace label). Each app implements this in its own language so
-/// the shared <c>ErrorReportPage</c> / <c>ErrorHandler</c> carry no hardcoded,
-/// app-specific copy. Registered as a DI singleton.
+/// Supplies every user-facing string the toolkit error stack needs. Each consuming app
+/// implements this in its own language and registers it as a DI singleton.
+/// Members with default implementations are opt-in additions — existing implementors
+/// compile without change.
 /// </summary>
 public interface IErrorTextProvider
 {
-    /// <summary>Headline on the error report screen (e.g. "⚠ An app error occurred").</summary>
+    // ── Error report screen ─────────────────────────────────────────────────
+
+    /// <summary>Headline shown at the top of the error report modal.</summary>
     string ErrorReportTitle { get; }
 
-    /// <summary>Label for the "copy details" action.</summary>
+    /// <summary>Question shown above the user-description input.</summary>
+    string WhatWereYouDoingLabel => "What were you doing when the error occurred?";
+
+    /// <summary>Placeholder text inside the user-description Entry.</summary>
+    string DescriptionPlaceholder => "Describe what happened… (optional)";
+
+    /// <summary>Section header above the technical detail box.</summary>
+    string TechnicalDetailsLabel => "Technical Error Details";
+
+    /// <summary>Label for the inline copy button beside the detail box.</summary>
     string CopyDetails { get; }
 
-    /// <summary>Confirmation shown after details are copied.</summary>
+    /// <summary>Confirmation text shown on the copy button after a successful copy.</summary>
     string Copied { get; }
 
-    /// <summary>Label for the "close" action.</summary>
+    /// <summary>Label for the close button.</summary>
     string Close { get; }
+
+    /// <summary>Small branding label rendered inside the detail section.</summary>
+    string BrandingText => "ERROR CAPTURE ENGINE";
+
+    // ── Inline / toast errors ────────────────────────────────────────────────
 
     /// <summary>Generic summary used when an exception carries no user message.</summary>
     string UnexpectedError { get; }
 
-    /// <summary>Inline message for connectivity failures (e.g. <c>HttpRequestException</c>).</summary>
+    /// <summary>Inline message for connectivity failures.</summary>
     string NetworkError { get; }
 
-    /// <summary>Inline message for request timeouts (e.g. <c>TaskCanceledException</c>).</summary>
+    /// <summary>Inline message for request timeouts.</summary>
     string TimeoutError { get; }
 
-    /// <summary>Title shown on the brief error toast/floater (e.g. "Error").</summary>
+    /// <summary>Title shown on the brief error toast.</summary>
     string ErrorToastTitle { get; }
 
-    /// <summary>Label for the action button on the error toast that opens the full report (e.g. "Details").</summary>
+    /// <summary>Label for the toast action button that opens the full report.</summary>
     string ErrorDetailsButton => "Details";
 
-    /// <summary>Renders the trace/timestamp sub-label (e.g. "Trace ID: {id} • {time}").</summary>
+    /// <summary>Renders the trace/timestamp sub-label.</summary>
     string TraceLabel(string traceId, string timestampLocal);
 }

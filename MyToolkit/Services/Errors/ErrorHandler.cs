@@ -195,7 +195,9 @@ public class ErrorHandler
                           ?? Shell.Current?.Navigation;
                 if (nav == null) { _reportVisible = false; return; }
 
-                var page = new ErrorReportPage(report, _text);
+                var theme = ServiceHelper.GetSafe<IErrorPageTheme>() ?? new DefaultErrorPageTheme();
+                var vm    = new MyToolkit.ViewModels.ErrorReportViewModel(report, _text, theme);
+                var page  = new ErrorReportPage(vm);
                 page.Disappearing += (_, _) => _reportVisible = false;
                 await nav.PushModalAsync(page);
             }

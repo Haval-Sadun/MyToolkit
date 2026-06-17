@@ -12,7 +12,7 @@
 		<!-- NuGet packaging -->
 		<IsPackable>true</IsPackable>
 		<PackageId>Haval.MyToolkit</PackageId>
-		<Version>1.0.3</Version>
+		<Version>1.1.0</Version>
 		<Authors>Haval</Authors>
 		<Description>Shared MAUI base layer — ViewModels, navigation, HTTP/auth pipeline, error handling, popups.</Description>
 		<PackageTags>maui;mvvm;toolkit</PackageTags>
@@ -30,6 +30,8 @@
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
 		<PackageReference Include="UXDivers.Popups.Maui" Version="0.9.4" />
 		<PackageReference Include="Microsoft.Extensions.Http" Version="10.0.0" />
+		<PackageReference Include="Plugin.Firebase.CloudMessaging" Version="4.0.0" />
+		<PackageReference Include="Plugin.Firebase.Core" Version="4.0.0" />
 	</ItemGroup>
 
 </Project>
