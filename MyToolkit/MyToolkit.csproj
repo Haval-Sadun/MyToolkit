@@ -26,12 +26,12 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Maui.Controls" Version="10.0.60" />
+		<PackageReference Include="Microsoft.Maui.Controls" Version="10.0.71" />
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
 		<PackageReference Include="UXDivers.Popups.Maui" Version="0.9.4" />
-		<PackageReference Include="Microsoft.Extensions.Http" Version="10.0.0" />
-		<PackageReference Include="Plugin.Firebase.CloudMessaging" Version="4.0.0" />
-		<PackageReference Include="Plugin.Firebase.Core" Version="4.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Http" Version="10.0.9" />
+		<PackageReference Include="Plugin.Firebase.CloudMessaging" Version="4.0.1" />
+		<PackageReference Include="Plugin.Firebase.Core" Version="4.2.0" />
 	</ItemGroup>
 
 </Project>

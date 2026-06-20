@@ -19,7 +19,7 @@ public sealed class PopupPresenter : IPopupPresenter
     // ── Transient notifications ─────────────────────────────────────────────
 
     public Task ToastAsync(string title, string? icon = null, Color? iconColor = null,
-        VerticalPosition position = VerticalPosition.Top)
+        VerticalPosition position = VerticalPosition.Bottom)
     {
         var popup = new Toast { Title = title, VerticalPosition = position };
         if (icon is not null) popup.IconText = icon;
@@ -194,7 +194,42 @@ public sealed class PopupPresenter : IPopupPresenter
     /// bottom-anchored sheets) clears the Android gesture / 3-button navigation bar under the
     /// enforced edge-to-edge layout of Android 15+.
     /// </summary>
-    private static void ApplySafeArea(PopupPage popup) => popup.SafeAreaAsPadding = SafeAreaAsPadding.All;
+    private static void ApplySafeArea(PopupPage popup)
+    {
+#if ANDROID
+        // SafeAreaAsPadding.All reads insets forwarded through the MAUI page layer. Pages
+        // that deliberately opt out of safe-area handling (e.g. full-screen image viewers)
+        // zero those forwarded insets, leaving bottom-anchored popups behind the nav bar.
+        // Reading RootWindowInsets from the DecorView is reliable regardless of what the
+        // current page does with insets.
+        var insets = WindowSystemBarsInsetsDp();
+        if (insets != default)
+        {
+            popup.Padding = new Thickness(insets.Left, insets.Top, insets.Right, insets.Bottom);
+            return;
+        }
+#endif
+        popup.SafeAreaAsPadding = SafeAreaAsPadding.All;
+    }
+
+#if ANDROID
+    private static Thickness WindowSystemBarsInsetsDp()
+    {
+        try
+        {
+            var activity = Microsoft.Maui.ApplicationModel.Platform.CurrentActivity;
+            var decorView = activity?.Window?.DecorView;
+            var rootInsets = decorView?.RootWindowInsets;
+            if (rootInsets is null) return default;
+            var compat = AndroidX.Core.View.WindowInsetsCompat.ToWindowInsetsCompat(rootInsets);
+            var sys = compat.GetInsets(AndroidX.Core.View.WindowInsetsCompat.Type.SystemBars());
+            var density = decorView.Resources?.DisplayMetrics?.Density ?? 1f;
+            if (density <= 0) density = 1f;
+            return new Thickness(sys.Left / density, sys.Top / density, sys.Right / density, sys.Bottom / density);
+        }
+        catch { return default; }
+    }
+#endif
 
     /// <summary>Builds a button command that resolves <paramref name="tcs"/> then closes <paramref name="popup"/>.</summary>
     private static Command ResolveCommand<T>(PopupPage popup, TaskCompletionSource<T> tcs, T value) =>

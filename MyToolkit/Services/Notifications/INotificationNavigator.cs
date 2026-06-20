@@ -1,5 +1,7 @@
 using MyToolkit.Models;
 
+using Notification = MyToolkit.Models.Notification;
+
 namespace MyToolkit.Services.Notifications;
 
 /// <summary>

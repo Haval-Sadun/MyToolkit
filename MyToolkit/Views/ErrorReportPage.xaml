@@ -7,7 +7,7 @@
                    x:DataType="vm:ErrorReportViewModel"
                    BackgroundColor="{Binding Theme.PageBackground}">
 
-    <Grid RowDefinitions="Auto,Auto,Auto,*,Auto,Auto"
+    <Grid RowDefinitions="Auto,Auto,Auto,*,Auto,Auto,Auto"
           Padding="20,52,20,28" RowSpacing="0">
 
         <!-- ① Header: warning icon · title · ✕ close -->
@@ -49,7 +49,8 @@
                     Stroke="{Binding Theme.InputBorderBrush}"
                     BackgroundColor="{Binding Theme.InputBackground}"
                     Padding="4,2">
-                <Entry Placeholder="{Binding DescriptionPlaceholder}"
+                <Entry Text="{Binding UserDescription}"
+                       Placeholder="{Binding DescriptionPlaceholder}"
                        PlaceholderColor="{Binding Theme.TraceColor}"
                        TextColor="{Binding Theme.InputTextColor}"
                        BackgroundColor="{Binding Theme.InputBackground}"
@@ -83,15 +84,25 @@
                     BackgroundColor="{Binding Theme.DetailBoxBackground}">
                 <ScrollView Padding="12" FlowDirection="LeftToRight">
                     <Label Text="{Binding DetailText}"
-                           FontFamily="JetBrainsMono" FontSize="11"
+                           FontFamily="ManropeRegular" FontSize="11"
                            TextColor="{Binding Theme.DetailTextColor}"
                            LineBreakMode="CharacterWrap" />
                 </ScrollView>
             </Border>
         </Grid>
 
-        <!-- ⑤ Branding badge -->
-        <HorizontalStackLayout Grid.Row="4"
+        <!-- ⑤ Send to Admin button (hidden when no admin e-mail configured) -->
+        <Button Grid.Row="4"
+                Text="{Binding SendToAdminLabel}"
+                Command="{Binding SendToAdminCommand}"
+                IsVisible="{Binding CanSendToAdmin}"
+                TextColor="{Binding Theme.SecondaryButtonTextColor}"
+                BackgroundColor="{Binding Theme.CopyButtonBackground}"
+                FontSize="14" CornerRadius="12" HeightRequest="50"
+                Margin="0,0,0,10" />
+
+        <!-- ⑥ Branding badge -->
+        <HorizontalStackLayout Grid.Row="5"
                                HorizontalOptions="Center"
                                Margin="0,0,0,16">
             <Border StrokeThickness="0" StrokeShape="RoundRectangle 14"
@@ -103,8 +114,8 @@
             </Border>
         </HorizontalStackLayout>
 
-        <!-- ⑥ Close button -->
-        <Button Grid.Row="5"
+        <!-- ⑦ Close button -->
+        <Button Grid.Row="6"
                 Text="{Binding CloseLabel}"
                 TextColor="{Binding Theme.SecondaryButtonTextColor}"
                 BackgroundColor="Transparent"

@@ -2,6 +2,8 @@ using MyToolkit.Models;
 using MyToolkit.Services.Auth;
 using MyToolkit.Services.Net;
 
+using Notification = MyToolkit.Models.Notification;
+
 namespace MyToolkit.Services.Notifications;
 
 /// <summary>

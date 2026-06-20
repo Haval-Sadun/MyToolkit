@@ -51,6 +51,21 @@ public interface IErrorTextProvider
     /// <summary>Label for the toast action button that opens the full report.</summary>
     string ErrorDetailsButton => "Details";
 
+    /// <summary>
+    /// Admin e-mail address for the "Send to Admin" button on the error report page.
+    /// Return an empty string (default) to hide the button entirely.
+    /// </summary>
+    string AdminEmail => string.Empty;
+
+    /// <summary>Label for the "Send to Admin" button on the error report page.</summary>
+    string SendToAdminLabel => "Send to Admin";
+
+    /// <summary>Subject line used when composing the admin error report e-mail.</summary>
+    string AdminEmailSubject => "Error Report";
+
+    /// <summary>Toast shown when the email client fails or is unavailable.</summary>
+    string EmailSendFailed => "Failed to send email";
+
     /// <summary>Renders the trace/timestamp sub-label.</summary>
     string TraceLabel(string traceId, string timestampLocal);
 }

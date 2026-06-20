@@ -10,7 +10,11 @@ public partial class ErrorReportPage : ToolkitPage
     {
         InitializeComponent();
         BindingContext = vm;
+        vm.RequestClose += OnRequestClose;
     }
+
+    private void OnRequestClose() => MainThread.BeginInvokeOnMainThread(async () =>
+        await Navigation.PopModalAsync());
 
     private async void OnCloseClicked(object? sender, EventArgs e)
         => await Navigation.PopModalAsync();
