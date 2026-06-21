@@ -15,6 +15,7 @@ public partial class ErrorReportViewModel : ToolkitViewModel
     private readonly ErrorReport _report;
     private readonly IErrorTextProvider _text;
     private readonly IErrorToastPresenter _toast;
+    private readonly IErrorReporter _reporter;
 
     /// <summary>Fired on successful email compose — the page pops the modal.</summary>
     public event Action? RequestClose;
@@ -34,7 +35,7 @@ public partial class ErrorReportViewModel : ToolkitViewModel
     public string BrandingText { get; }
     public string SendToAdminLabel { get; }
 
-    /// <summary>True when an admin e-mail is configured; controls button visibility.</summary>
+    /// <summary>True when the reporter is capable of sending; controls "Send to Admin" button visibility.</summary>
     public bool CanSendToAdmin { get; }
 
     // ── Mutable ──────────────────────────────────────────────────────────────
@@ -45,11 +46,17 @@ public partial class ErrorReportViewModel : ToolkitViewModel
     [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty]
     private string _userDescription = string.Empty;
 
-    public ErrorReportViewModel(ErrorReport report, IErrorTextProvider text, IErrorPageTheme theme, IErrorToastPresenter? toast = null)
+    public ErrorReportViewModel(
+        ErrorReport report,
+        IErrorTextProvider text,
+        IErrorPageTheme theme,
+        IErrorReporter reporter,
+        IErrorToastPresenter? toast = null)
     {
         _report = report;
         _text = text;
         _toast = toast ?? new NoOpErrorToastPresenter();
+        _reporter = reporter;
         Theme = theme;
 
         Title = text.ErrorReportTitle;
@@ -63,7 +70,7 @@ public partial class ErrorReportViewModel : ToolkitViewModel
         BrandingText = text.BrandingText;
         SendToAdminLabel = text.SendToAdminLabel;
         _copyLabel = text.CopyDetails;
-        CanSendToAdmin = !string.IsNullOrWhiteSpace(text.AdminEmail);
+        CanSendToAdmin = reporter.CanReport;
     }
 
     [RelayCommand]
@@ -80,42 +87,29 @@ public partial class ErrorReportViewModel : ToolkitViewModel
     [RelayCommand]
     private async Task SendToAdmin()
     {
+        if (IsBusy) return;
+        IsBusy = true;
         try
         {
-            var adminEmail = _text.AdminEmail;
-            if (string.IsNullOrWhiteSpace(adminEmail)) return;
-            if (!Email.Default.IsComposeSupported) return;
-
-            // Use MAUI's cache directory — its email implementation registers a
-            // FileProvider for this path on Android, so the attachment is accessible
-            // to the email app. Path.GetTempPath() returns an internal path that
-            // third-party apps cannot read.
-            var fileName = $"error_{_report.TraceId}.txt";
-            var path = Path.Combine(FileSystem.Current.CacheDirectory, fileName);
-            await File.WriteAllTextAsync(path, _report.FullDetail);
-
-            var body = string.IsNullOrWhiteSpace(UserDescription)
-                ? $"Trace ID: {_report.TraceId}\n\n{Summary}"
-                : $"Trace ID: {_report.TraceId}\n\nWhat I was doing:\n{UserDescription}\n\n{Summary}";
-
-            var recipients = adminEmail
-                .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .ToList();
-
-            var message = new EmailMessage
+            var outcome = await _reporter.ReportAsync(_report, UserDescription);
+            if (outcome.Succeeded)
             {
-                Subject = $"{_text.AdminEmailSubject} [{_report.TraceId}]",
-                Body = body,
-                To = recipients,
-                Attachments = [new EmailAttachment(path)]
-            };
-
-            await Email.Default.ComposeAsync(message);
-            RequestClose?.Invoke();
+                if (!string.IsNullOrEmpty(outcome.Message))
+                    await _toast.ShowAsync(_text.ErrorToastTitle, outcome.Message);
+                RequestClose?.Invoke();
+            }
+            else
+            {
+                await _toast.ShowAsync(_text.ErrorToastTitle, outcome.Message ?? _text.EmailSendFailed);
+            }
         }
         catch
         {
             await _toast.ShowAsync(_text.ErrorToastTitle, _text.EmailSendFailed);
+        }
+        finally
+        {
+            IsBusy = false;
         }
     }
 }

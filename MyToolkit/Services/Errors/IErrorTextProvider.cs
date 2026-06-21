@@ -66,6 +66,9 @@ public interface IErrorTextProvider
     /// <summary>Toast shown when the email client fails or is unavailable.</summary>
     string EmailSendFailed => "Failed to send email";
 
+    /// <summary>Success toast shown after a report is submitted via a backend reporter.</summary>
+    string ReportSentLabel => "Report submitted. Thank you.";
+
     /// <summary>Renders the trace/timestamp sub-label.</summary>
     string TraceLabel(string traceId, string timestampLocal);
 }
