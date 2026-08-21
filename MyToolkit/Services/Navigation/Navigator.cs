@@ -29,6 +29,15 @@ public static class Navigator
     public static Task PopToRootAsync() =>
         RunGuarded(nameof(PopToRootAsync), nav => nav.PopToRootAsync());
 
+    /// <summary>Presents a page modally — covering the tab bar, with the platform's native
+    /// slide-up transition. For screens that stand apart from the tab hierarchy (a full-screen
+    /// player, a photo viewer) rather than drilling into it.</summary>
+    public static Task PushModalAsync(Page page) =>
+        RunGuarded(nameof(PushModalAsync), nav => nav.PushModalAsync(page));
+
+    public static Task PopModalAsync() =>
+        RunGuarded(nameof(PopModalAsync), nav => nav.PopModalAsync());
+
     public static Task GoToAsync(string route) =>
         RunGuarded($"GoToAsync({route})", _ => Shell.Current!.GoToAsync(route));
 
