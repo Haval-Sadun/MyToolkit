@@ -1,0 +1,11 @@
+<Project>
+  <!-- Loaded before Sdk.props, unlike a PropertyGroup inside the .csproj body — the SDK's own
+       runtime-pack selection for restore reads UseMonoRuntime that early, so setting it any
+       later doesn't change which pack a self-contained publish asks NuGet for. Windows is
+       CoreCLR, never Mono (Mono here is Android/iOS-only), so without this a self-contained
+       win-x64 publish fails trying to restore Microsoft.NETCore.App.Runtime.Mono.win-x64,
+       a pack that doesn't exist. -->
+  <PropertyGroup>
+    <UseMonoRuntime Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">false</UseMonoRuntime>
+  </PropertyGroup>
+</Project>

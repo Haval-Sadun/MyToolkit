@@ -39,15 +39,43 @@ public abstract class ToolkitPage : ContentPage
     protected virtual bool ApplySafeArea => true;
 
     /// <summary>
-    /// Whether a Shell tab bar sits below this page. Tab roots already clear the system nav bar
-    /// via the tab bar, so they must NOT add a bottom inset. Pushed detail pages have no tab bar
-    /// and therefore do need it. Defaults to the inverse of <see cref="DisposeViewModelOnPop"/>.
+    /// Whether a Shell tab bar sits below this page. When hosted inside Shell, this follows
+    /// <see cref="Shell.GetTabBarIsVisible(BindableObject)"/> so pushed child pages that still
+    /// show tabs are treated correctly. Outside Shell, fall back to the historical default
+    /// (inverse of <see cref="DisposeViewModelOnPop"/>).
     /// </summary>
-    protected virtual bool HasBottomTabBar => !DisposeViewModelOnPop;
+    protected virtual bool HasBottomTabBar => GetContainingShell() is not null
+        ? Shell.GetTabBarIsVisible(this)
+        : !DisposeViewModelOnPop;
 
-    // Android bottom nav-bar inset applies only to safe-area pages that have no tab bar below
-    // them, and never when an input row is being lifted manually (that path owns the bottom).
-    private bool ApplyBottomInset => ApplySafeArea && !HasBottomTabBar && KeyboardInsetTarget is null;
+    /// <summary>
+    /// Whether the tab bar from <see cref="HasBottomTabBar"/> is trusted to already clear the
+    /// Android system nav-bar inset on its own. Default true (the historical assumption). An app
+    /// that pads its own native tab bar to clear the inset (e.g. ZagrosTune's
+    /// ShellTabBarInsetFix) grows the tab bar's height without resizing the page content area
+    /// above it — override to false on that app's tab-root pages so this page gets the matching
+    /// bottom inset too, otherwise a gap opens up between the page content and the taller tab bar.
+    /// </summary>
+    protected virtual bool TabBarClearsOwnInset => true;
+
+    private Shell? GetContainingShell()
+    {
+        Element? current = this;
+        while (current is not null)
+        {
+            if (current is Shell shell)
+                return shell;
+
+            current = current.Parent;
+        }
+
+        return null;
+    }
+
+    // Android bottom nav-bar inset applies to safe-area pages with no tab bar below them, or
+    // with a tab bar that doesn't clear its own inset — never when an input row is being lifted
+    // manually (that path owns the bottom).
+    private bool ApplyBottomInset => ApplySafeArea && (!HasBottomTabBar || !TabBarClearsOwnInset) && KeyboardInsetTarget is null;
 
 #if ANDROID
     private bool _kbListenerAttached;
@@ -213,14 +241,23 @@ public abstract class ToolkitPage : ContentPage
 
     private void DetachInsetListener()
     {
-        if (_insetRoot is not null)
+        if (_insetRoot is { } root)
         {
             // Our listener consumed the bottom inset on the shared activity content root. Remove
             // it and force a fresh inset pass so Shell (and its tab bar) receives the FULL,
             // unmodified insets again — otherwise the tab bar keeps the last bottom-consumed
             // insets and slides under the system nav bar when popping back to a tab root.
-            AndroidX.Core.View.ViewCompat.SetOnApplyWindowInsetsListener(_insetRoot, null);
-            AndroidX.Core.View.ViewCompat.RequestApplyInsets(_insetRoot);
+            AndroidX.Core.View.ViewCompat.SetOnApplyWindowInsetsListener(root, null);
+
+            // Posted, not called synchronously: OnDisappearing fires while this page's pop
+            // transition is still animating, before the reappearing tab root's own views —
+            // Shell's tab bar included — are necessarily back in a state ready to receive a fresh
+            // dispatch. Requesting synchronously here left the tab bar applying whatever
+            // bottom-consumed insets it had last cached, i.e. exactly the "hidden behind the system
+            // nav bar" symptom the comment above used to only warn about, never actually prevent.
+            // Posting to the next UI-thread frame — after the current layout pass settles — is what
+            // reliably gets a fresh dispatch to actually reach it.
+            root.Post(() => AndroidX.Core.View.ViewCompat.RequestApplyInsets(root));
             _insetRoot = null;
         }
         _kbListenerAttached = false;

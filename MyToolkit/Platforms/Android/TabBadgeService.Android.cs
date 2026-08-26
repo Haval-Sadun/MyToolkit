@@ -1,6 +1,5 @@
 using Android.Views;
-using Google.Android.Material.BottomNavigation;
-using Google.Android.Material.Navigation;
+using MyToolkit.Platforms.Android;
 
 namespace MyToolkit.Services.Notifications;
 
@@ -17,7 +16,7 @@ public sealed partial class TabBadgeService
             var root = activity?.Window?.DecorView?.RootView;
             if (root is not ViewGroup vg) return;
 
-            var bottomNav = FindBottomNav(vg);
+            var bottomNav = AndroidBottomNav.Find(vg);
             if (bottomNav is null) return;
 
             var menu = bottomNav.Menu;
@@ -42,21 +41,5 @@ public sealed partial class TabBadgeService
         {
             System.Diagnostics.Debug.WriteLine($"[TabBadge] Android RenderBadge failed: {ex}");
         }
-    }
-
-    private static BottomNavigationView? FindBottomNav(ViewGroup parent)
-    {
-        for (int i = 0; i < parent.ChildCount; i++)
-        {
-            var child = parent.GetChildAt(i);
-            if (child is BottomNavigationView bnv) return bnv;
-            if (child is NavigationBarView nbv && nbv is BottomNavigationView b) return b;
-            if (child is ViewGroup vg)
-            {
-                var found = FindBottomNav(vg);
-                if (found is not null) return found;
-            }
-        }
-        return null;
     }
 }
