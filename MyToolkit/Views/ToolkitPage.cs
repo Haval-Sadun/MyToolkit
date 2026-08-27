@@ -13,6 +13,8 @@ namespace MyToolkit.Views;
 /// </summary>
 public abstract class ToolkitPage : ContentPage
 {
+    private const double InsetEpsilon = 0.01;
+
     /// <summary>The bound view-model viewed through its lifecycle contract, if any.</summary>
     protected ILifecycleAware? Lifecycle => BindingContext as ILifecycleAware;
 
@@ -44,7 +46,7 @@ public abstract class ToolkitPage : ContentPage
     /// show tabs are treated correctly. Outside Shell, fall back to the historical default
     /// (inverse of <see cref="DisposeViewModelOnPop"/>).
     /// </summary>
-    protected virtual bool HasBottomTabBar => GetContainingShell() is not null
+    protected virtual bool HasBottomTabBar => TryGetContainingShell(out _) 
         ? Shell.GetTabBarIsVisible(this)
         : !DisposeViewModelOnPop;
 
@@ -58,18 +60,30 @@ public abstract class ToolkitPage : ContentPage
     /// </summary>
     protected virtual bool TabBarClearsOwnInset => true;
 
-    private Shell? GetContainingShell()
-    {
-        Element? current = this;
-        while (current is not null)
-        {
-            if (current is Shell shell)
-                return shell;
+    private Shell? _containingShell;
+    private bool _containingShellResolved;
 
-            current = current.Parent;
+    private bool TryGetContainingShell(out Shell? shell)
+    {
+        if (!_containingShellResolved)
+        {
+            Element? current = this;
+            while (current is not null)
+            {
+                if (current is Shell foundShell)
+                {
+                    _containingShell = foundShell;
+                    break;
+                }
+
+                current = current.Parent;
+            }
+
+            _containingShellResolved = true;
         }
 
-        return null;
+        shell = _containingShell;
+        return shell is not null;
     }
 
     // Android bottom nav-bar inset applies to safe-area pages with no tab bar below them, or
@@ -80,6 +94,7 @@ public abstract class ToolkitPage : ContentPage
 #if ANDROID
     private bool _kbListenerAttached;
     private Android.Views.View? _insetRoot;
+    private InsetsListener? _insetsListener;
     private double _basePaddingBottom;
 #endif
 
@@ -97,18 +112,7 @@ public abstract class ToolkitPage : ContentPage
         On<iOS>().SetUseSafeArea(ApplySafeArea);
 #endif
 #if ANDROID
-        if (KeyboardInsetTarget is { } target)
-        {
-            SetWindowSoftInput(Android.Views.SoftInput.AdjustNothing);
-            if (!TryAttachInsetListener())
-                target.HandlerChanged += OnTargetHandlerChanged;
-        }
-        else if (ApplyBottomInset)
-        {
-            _basePaddingBottom = Padding.Bottom;
-            if (!TryAttachInsetListener())
-                Loaded += OnPageLoaded;
-        }
+        StartAndroidInsetHandling();
 #endif
     }
 
@@ -117,19 +121,15 @@ public abstract class ToolkitPage : ContentPage
         base.OnDisappearing();
         Lifecycle?.OnDisappearing();
 #if ANDROID
-        if (KeyboardInsetTarget is { } target)
-        {
-            // Restore the app-wide default so other pages keep normal keyboard behavior.
-            SetWindowSoftInput(Android.Views.SoftInput.AdjustResize);
-            target.HandlerChanged -= OnTargetHandlerChanged;
-            DetachInsetListener();
-        }
-        else if (ApplyBottomInset)
-        {
-            Loaded -= OnPageLoaded;
-            DetachInsetListener();
-        }
+        StopAndroidInsetHandling();
 #endif
+    }
+
+    protected override void OnParentSet()
+    {
+        base.OnParentSet();
+        _containingShell = null;
+        _containingShellResolved = false;
     }
 
     protected override void OnNavigatedTo(NavigatedToEventArgs args)
@@ -197,6 +197,43 @@ public abstract class ToolkitPage : ContentPage
     }
 
 #if ANDROID
+    private void StartAndroidInsetHandling()
+    {
+        if (KeyboardInsetTarget is { } target)
+        {
+            SetWindowSoftInput(Android.Views.SoftInput.AdjustNothing);
+            if (!TryAttachInsetListener())
+                target.HandlerChanged += OnTargetHandlerChanged;
+
+            return;
+        }
+
+        if (!ApplyBottomInset)
+            return;
+
+        _basePaddingBottom = Padding.Bottom;
+        if (!TryAttachInsetListener())
+            Loaded += OnPageLoaded;
+    }
+
+    private void StopAndroidInsetHandling()
+    {
+        if (KeyboardInsetTarget is { } target)
+        {
+            // Restore the app-wide default so other pages keep normal keyboard behavior.
+            SetWindowSoftInput(Android.Views.SoftInput.AdjustResize);
+            target.HandlerChanged -= OnTargetHandlerChanged;
+            DetachInsetListener();
+            return;
+        }
+
+        if (!ApplyBottomInset)
+            return;
+
+        Loaded -= OnPageLoaded;
+        DetachInsetListener();
+    }
+
     private static void SetWindowSoftInput(Android.Views.SoftInput mode)
         => Microsoft.Maui.ApplicationModel.Platform.CurrentActivity?.Window?.SetSoftInputMode(mode);
 
@@ -213,8 +250,14 @@ public abstract class ToolkitPage : ContentPage
     }
 
     /// <summary>Sets the page's bottom padding to its base value plus the nav-bar inset.</summary>
-    private void ApplyBottomInsetPadding(double navBottomDip) =>
-        Padding = new Thickness(Padding.Left, Padding.Top, Padding.Right, _basePaddingBottom + navBottomDip);
+    private void ApplyBottomInsetPadding(double navBottomDip)
+    {
+        var nextBottom = _basePaddingBottom + navBottomDip;
+        if (Math.Abs(Padding.Bottom - nextBottom) < InsetEpsilon)
+            return;
+
+        Padding = new Thickness(Padding.Left, Padding.Top, Padding.Right, nextBottom);
+    }
 
     private bool TryAttachInsetListener()
     {
@@ -231,7 +274,8 @@ public abstract class ToolkitPage : ContentPage
         if (activity?.Window?.DecorView?.FindViewById(Android.Resource.Id.Content) is Android.Views.View root)
         {
             _insetRoot = root;
-            AndroidX.Core.View.ViewCompat.SetOnApplyWindowInsetsListener(root, new InsetsListener(this));
+            _insetsListener ??= new InsetsListener(this);
+            AndroidX.Core.View.ViewCompat.SetOnApplyWindowInsetsListener(root, _insetsListener);
             AndroidX.Core.View.ViewCompat.RequestApplyInsets(root);
             _kbListenerAttached = true;
             return true;
@@ -272,7 +316,13 @@ public abstract class ToolkitPage : ContentPage
         // Lift the input row above the keyboard; when the keyboard is hidden keep it
         // above the navigation bar (imeBottomDip == 0 there, so fall back to nav inset).
         if (KeyboardInsetTarget is { } target)
-            target.Margin = new Thickness(0, 0, 0, Math.Max(imeBottomDip, navBottomDip));
+        {
+            var nextBottom = Math.Max(imeBottomDip, navBottomDip);
+            if (Math.Abs(target.Margin.Bottom - nextBottom) < InsetEpsilon)
+                return;
+
+            target.Margin = new Thickness(0, 0, 0, nextBottom);
+        }
     }
 
     private sealed class InsetsListener : Java.Lang.Object, AndroidX.Core.View.IOnApplyWindowInsetsListener
