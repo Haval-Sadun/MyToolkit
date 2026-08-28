@@ -59,9 +59,9 @@ public abstract partial class ToolkitViewModel : ObservableObject, ILifecycleAwa
         {
             await action();
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException ex) when (ex is not TaskCanceledException { InnerException: TimeoutException })
         {
-            // Navigation/teardown cancellation — nothing to report.
+            // Real cancellation only — an HttpClient timeout's TaskCanceledException has a TimeoutException inner and falls through below.
         }
         catch (Exception ex)
         {
