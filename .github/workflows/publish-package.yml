@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - "MyToolkit/**"
+  workflow_dispatch: # lets a workflow-only change (like this one) be re-run manually
 
 jobs:
   pack-and-publish:
