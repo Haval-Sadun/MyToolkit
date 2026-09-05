@@ -7,13 +7,10 @@
 
 setlocal enabledelayedexpansion
 
-if "%~1"=="" (
-  echo Usage: release.bat ^<new-version^>
-  echo Example: release.bat 1.1.0
-  exit /b 1
-)
-
 set NEW_VERSION=%~1
+if "%NEW_VERSION%"=="" (
+  set /p NEW_VERSION=Enter new version ^(e.g. 1.2.0^):
+)
 
 :: ── Paths ────────────────────────────────────────────────────────────────────
 set SHARED_ROOT=%~dp0..
@@ -29,6 +26,7 @@ set LOCAL_FEED=C:\NuGet\test-packages
 echo %NEW_VERSION%| findstr /r "^[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*$" >nul
 if errorlevel 1 (
   echo ERROR: Version must be in MAJOR.MINOR.PATCH format ^(e.g. 1.2.0^)
+  pause
   exit /b 1
 )
 
@@ -94,11 +92,13 @@ echo   Package : %LOCAL_FEED%\Haval.MyToolkit.%NEW_VERSION%.nupkg
 echo   Apps    : update to this version is already written to all three csproj files.
 echo   Next    : run 'dotnet restore' in each app to pick up the new package.
 echo.
+pause
 endlocal
 exit /b 0
 
 :error
 echo.
 echo ERROR: Step failed. Check output above.
+pause
 endlocal
 exit /b 1

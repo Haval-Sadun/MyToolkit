@@ -24,9 +24,11 @@ dotnet pack "%MYTOOLKIT_CSPROJ%" -c Release -o "%LOCAL_FEED%"
 if errorlevel 1 (
   echo.
   echo ERROR: Pack failed.
+  pause
   exit /b 1
 )
 
 echo.
 echo Done.  Haval.MyToolkit.%CURRENT_VERSION%.nupkg is in %LOCAL_FEED%
+pause
 endlocal
