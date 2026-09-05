@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    paths:
+      - "MyToolkit/**"
 
 jobs:
   pack-and-publish:
@@ -24,7 +26,7 @@ jobs:
         run: dotnet workload install maui-android maui-ios maui-maccatalyst
 
       - name: Pack
-        run: dotnet pack MyToolkit.csproj -c Release -o ./nupkgs
+        run: dotnet pack MyToolkit/MyToolkit.csproj -c Release -o ./nupkgs
 
       # --skip-duplicate makes this a no-op (not a failure) when this exact <Version> was already
       # published — so not every push has to bump the version to succeed.
