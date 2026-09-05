@@ -16,6 +16,10 @@
 		<Authors>Haval</Authors>
 		<Description>Shared MAUI base layer — ViewModels, navigation, HTTP/auth pipeline, error handling, popups.</Description>
 		<PackageTags>maui;mvvm;toolkit</PackageTags>
+		<!-- Without these, a published package links to no repo at all and only shows up under the
+		     account-level Packages tab, not this repo's own sidebar. -->
+		<RepositoryUrl>https://github.com/Haval-Sadun/MyToolkit</RepositoryUrl>
+		<PackageProjectUrl>https://github.com/Haval-Sadun/MyToolkit</PackageProjectUrl>
 		<IncludeSymbols>true</IncludeSymbols>
 		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">21.0</SupportedOSPlatformVersion>
