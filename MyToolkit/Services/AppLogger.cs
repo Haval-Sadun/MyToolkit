@@ -1,3 +1,5 @@
+// Keeps Debug.WriteLine in Release builds — [Conditional("DEBUG")] strips it from the published package otherwise.
+#define DEBUG
 using System.Text;
 using MyToolkit.Services.Errors;
 
