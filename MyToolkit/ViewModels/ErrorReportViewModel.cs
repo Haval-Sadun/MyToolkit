@@ -103,8 +103,9 @@ public partial class ErrorReportViewModel : ToolkitViewModel
                 await _toast.ShowAsync(_text.ErrorToastTitle, outcome.Message ?? _text.EmailSendFailed);
             }
         }
-        catch
+        catch (Exception ex)
         {
+            ServiceHelper.GetSafe<AppLogger>()?.LogException(ex, "send error report");
             await _toast.ShowAsync(_text.ErrorToastTitle, _text.EmailSendFailed);
         }
         finally

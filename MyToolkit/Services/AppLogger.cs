@@ -49,9 +49,9 @@ public class AppLogger
     /// <summary>Logs a warning message (level <c>WARN</c>).</summary>
     public void LogWarning(string message) => Log("WARN", message);
 
-    /// <summary>Logs an exception with its context, type, message and stack trace (level <c>ERROR</c>).</summary>
+    /// <summary>Logs an exception with its context, type, message, stack trace and inner exceptions (level <c>ERROR</c>).</summary>
     public void LogException(Exception ex, string context)
-        => Log("ERROR", $"{context}: {ex.GetType().Name}: {ex.Message}\n  {ex.StackTrace}");
+        => Log("ERROR", $"{context}: {ex}");
 
     /// <summary>Logs a backend API error envelope (level <c>WARN</c>).</summary>
     public void LogApiError(IApiError error, string context)

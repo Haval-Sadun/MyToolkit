@@ -73,7 +73,9 @@ public abstract partial class ToolkitViewModel : ObservableObject, ILifecycleAwa
             }
             catch (Exception handlerEx)
             {
-                System.Diagnostics.Debug.WriteLine($"ErrorHandler failed: {handlerEx}");
+                var logger = ServiceHelper.GetSafe<AppLogger>();
+                logger?.LogException(ex, context ?? GetType().Name);
+                logger?.LogException(handlerEx, "ErrorHandler failed");
             }
         }
         finally

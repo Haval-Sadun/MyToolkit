@@ -67,7 +67,11 @@ public static class Navigator
         }
         catch (Exception ex)
         {
-            Diagnostics?.HandleError(ex, $"Navigation '{op}'");
+            // No diagnostics registered must not mean the failure vanishes.
+            if (Diagnostics is { } diagnostics)
+                diagnostics.HandleError(ex, $"Navigation '{op}'");
+            else
+                ServiceHelper.GetSafe<AppLogger>()?.LogException(ex, $"Navigation '{op}'");
         }
         finally
         {

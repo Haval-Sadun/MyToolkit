@@ -25,7 +25,7 @@ public sealed partial class TabBadgeService
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[TabBadge] iOS RenderBadge failed: {ex}");
+            ServiceHelper.GetSafe<AppLogger>()?.LogException(ex, "TabBadge iOS RenderBadge");
         }
     }
 

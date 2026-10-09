@@ -33,7 +33,8 @@ public abstract partial class PaginatedListViewModel<TItem> : ToolkitViewModel
     protected virtual void OnItemEvicted(TItem item) { }
 
     /// <summary>Called when a fetch throws (override to log / surface).</summary>
-    protected virtual void OnLoadError(Exception ex, string operation) { }
+    protected virtual void OnLoadError(Exception ex, string operation) =>
+        Services.ServiceHelper.GetSafe<Services.AppLogger>()?.LogException(ex, $"{GetType().Name}.{operation}");
 
     /// <summary>(Re)load the first page, clearing any existing items.</summary>
     protected async Task LoadAsync()
