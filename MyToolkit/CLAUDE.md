@@ -20,7 +20,7 @@ There is no solution file in this directory. The library is built as part of eac
 dotnet build <consuming-app>.sln
 ```
 
-There are no tests in this library — validation is done by building and running consuming apps.
+There are no tests in this library — validation is done by building and running consuming apps. Exception: the platform-free `Services/Concurrency/` and `Collections/` types (and `INetworkStatus`) are unit-tested by ZagrosTune's test project, which links their source files directly.
 
 ## Architecture
 
@@ -31,10 +31,12 @@ There are no tests in this library — validation is done by building and runnin
 | `ViewModels/` | MVVM base classes (`ToolkitViewModel`, `PaginatedListViewModel<T>`) |
 | `Views/` | Page base (`ToolkitPage`) and shared screens (`ErrorReportPage`) |
 | `Services/Errors/` | Exception types + `ErrorHandler` (central exception sink) |
-| `Services/Navigation/` | `Navigator` — re-entrancy-guarded Shell nav wrapper |
-| `Services/Net/` | `ApiService` — JWT-authenticated HTTP client wrapper |
+| `Services/Navigation/` | `Navigator` — re-entrancy-guarded Shell nav wrapper; `DrillDown` — builds/pushes transient detail pages and disposes their VMs once popped (call `DrillDown.ReleasePopped` from `Shell.OnNavigated`) (1.3.0) |
+| `Services/Net/` | `ApiService` — JWT-authenticated HTTP client wrapper; `INetworkStatus`/`NetworkStatus` — online/unmetered over `Connectivity`, fail-open/fail-closed respectively (1.3.0) |
 | `Services/Popups/` | `IPopupPresenter` / `PopupPresenter` — all modal dialogs |
 | `Services/Time/` | `TimeAgo` — relative-time formatting |
+| `Services/Concurrency/` | `SerialMailbox` (actor mailbox: one message at a time, in order), `BackgroundTaskTracker` (owned fire-and-forget work, cancelled and awaited on dispose), `SingleFlight<T>` (coalesces concurrent work per key) — platform-free (1.3.0) |
+| `Collections/` | `LruTracker` (O(1) recency order), `LruCache<T>` (size-capped LRU dictionary) — not thread-safe by design (1.3.0) |
 | `Services/` (root) | `ServiceHelper` (locator), `AppLogger` (rolling file log) |
 | `Controls/` | Reusable XAML controls (`CardView`) |
 
