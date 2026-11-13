@@ -121,10 +121,27 @@ internal sealed class SheetPopup : PopupPage
 
     public override void OnDisappearing()
     {
+        // A dismissed form (tap outside, back) must not leave the soft keyboard up with nothing to type into.
+        _focusTarget?.Unfocus();
+        HideSoftKeyboard();
 #if ANDROID
         DetachKeyboardListener();
 #endif
         base.OnDisappearing();
+    }
+
+    private static void HideSoftKeyboard()
+    {
+#if ANDROID
+        if (Microsoft.Maui.ApplicationModel.Platform.CurrentActivity is not { } activity)
+            return;
+
+        var token = (activity.CurrentFocus ?? activity.Window?.DecorView)?.WindowToken;
+        if (token is null)
+            return;
+
+        (activity.GetSystemService(Android.Content.Context.InputMethodService) as Android.Views.InputMethods.InputMethodManager)?.HideSoftInputFromWindow(token, Android.Views.InputMethods.HideSoftInputFlags.None);
+#endif
     }
 
 #if ANDROID
