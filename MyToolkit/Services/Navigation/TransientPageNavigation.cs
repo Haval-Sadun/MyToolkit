@@ -4,7 +4,7 @@ namespace MyToolkit.Services.Navigation;
 
 /// <summary>Builds, pushes and disposes transient drill-down (detail) pages.</summary>
 /// <remarks>Sole owner of these pages' view-model disposal, so pages leave ToolkitPage.DisposeViewModelOnPop off.</remarks>
-public static class DrillDown
+public static class TransientPageNavigation
 {
     // UI-thread only: pushes and Shell.Navigated both run there.
     private static readonly HashSet<Page> Pushed = [];

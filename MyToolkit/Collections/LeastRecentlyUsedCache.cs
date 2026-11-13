@@ -1,10 +1,10 @@
 namespace MyToolkit.Collections;
 
 /// <summary>A size-capped dictionary that evicts the least recently used entry. Not thread-safe — confine it to one thread or actor, or lock around it.</summary>
-public sealed class LruCache<TValue>(int capacity)
+public sealed class LeastRecentlyUsedCache<TValue>(int capacity)
 {
     private readonly Dictionary<string, TValue> _entries = [];
-    private readonly LruTracker _recency = new();
+    private readonly LeastRecentlyUsedTracker _recency = new();
     private readonly int _capacity = Math.Max(1, capacity);
     private long _evictions;
 

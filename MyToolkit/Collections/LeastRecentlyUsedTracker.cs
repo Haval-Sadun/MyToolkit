@@ -2,7 +2,7 @@ namespace MyToolkit.Collections;
 
 /// <summary>Non-thread-safe O(1) LRU eviction order — Touch on every hit and insert, TryEvictOldest for eviction.</summary>
 /// <remarks>Not thread-safe by design; callers that need thread safety (see LocalStreamProxy) must wrap every call in their own lock.</remarks>
-public sealed class LruTracker
+public sealed class LeastRecentlyUsedTracker
 {
     private readonly LinkedList<string> _order = new();
     private readonly Dictionary<string, LinkedListNode<string>> _nodes = new();

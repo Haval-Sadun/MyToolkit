@@ -4,7 +4,7 @@ namespace MyToolkit.Services.Concurrency;
 
 /// <summary>Actor mailbox: messages run one at a time, in posting order, each to completion (including its awaits) before the next starts.</summary>
 /// <remarks>Platform-free; callers pass the dispatcher (e.g. one that runs on the UI thread). Posting never runs a message inline, so a handler can't re-enter itself.</remarks>
-public sealed class SerialMailbox(Func<Func<Task>, Task> dispatch, Action<Exception> onError)
+public sealed class OrderedTaskQueue(Func<Func<Task>, Task> dispatch, Action<Exception> onError)
 {
     private readonly Channel<Func<Task>> _channel = Channel.CreateUnbounded<Func<Task>>(new UnboundedChannelOptions { SingleReader = true });
     private int _started;
