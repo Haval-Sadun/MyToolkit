@@ -53,6 +53,7 @@ public sealed class PopupPalette
     public string? Placeholder { get; init; }
     public string? Accent { get; init; }
     public string? AccentVariant { get; init; }
+    public string? Danger { get; init; }
 
     // ── Fonts / icon glyphs — the literal value itself ───────────────────────────────────
     public string? Font { get; init; }

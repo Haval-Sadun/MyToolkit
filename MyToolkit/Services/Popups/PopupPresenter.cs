@@ -40,177 +40,118 @@ public sealed class PopupPresenter : IPopupPresenter
 
     // ── Informational (single dismiss) ──────────────────────────────────────
 
-    public Task AlertAsync(string text, string? title = null, string? closeIcon = null, Color? closeIconColor = null)
-    {
-        var popup = new SimpleTextPopup { Text = text };
-        if (title is not null) popup.Title = title;
-        if (closeIcon is not null) popup.CloseButtonIconText = closeIcon;
-        if (closeIconColor is not null) popup.CloseButtonIconColor = closeIconColor;
-        ApplySafeArea(popup);
-        return Service.PushAsync(popup);
-    }
+    public Task AlertAsync(string text, string? title = null, string? closeIcon = null, Color? closeIconColor = null, string? actionText = null)
+        => ShowAlertAsync(PopupKit.DefaultInfoIcon(), title, text, actionText);
 
-    public Task IconAlertAsync(string icon, string title, string text, string? actionText = null,
-        Color? iconColor = null)
+    public Task IconAlertAsync(string icon, string title, string text, string? actionText = null, Color? iconColor = null)
+        => ShowAlertAsync(icon, title, text, actionText);
+
+    private static Task ShowAlertAsync(string? icon, string? title, string text, string? actionText)
     {
-        var popup = new IconTextPopup
-        {
-            IconText = icon,
-            Title = title,
-            Text = text,
-            ShowActionButton = actionText is not null,
-        };
-        if (actionText is not null) popup.ActionButtonText = actionText;
-        if (iconColor is not null) popup.IconColor = iconColor;
+        var tcs = new TaskCompletionSource<bool>();
+        DialogPopup? popup = null;
+        popup = new DialogPopup(icon, title, text, actionText ?? "OK", PopupKit.ButtonKind.Primary, () => Resolve(popup!, tcs, true));
         ApplySafeArea(popup);
-        return Service.PushAsync(popup);
+        return ShowForResultAsync(popup, tcs, dismissed: true);
     }
 
     // ── Decisions ───────────────────────────────────────────────────────────
 
-    public Task<bool> ConfirmAsync(string title, string text, string acceptText, string? cancelText = null)
+    public Task<bool> ConfirmAsync(string title, string text, string acceptText, string? cancelText = null, bool isDestructive = false)
     {
-        var popup = new SimpleActionPopup
-        {
-            Title = title,
-            Text = text,
-            ActionButtonText = acceptText,
-            ShowActionButton = true,
-            ShowSecondaryActionButton = cancelText is not null,
-        };
         var tcs = new TaskCompletionSource<bool>();
-        popup.ActionButtonCommand = ResolveCommand(popup, tcs, true);
-        if (cancelText is not null)
-        {
-            popup.SecondaryActionButtonText = cancelText;
-            popup.SecondaryActionButtonCommand = ResolveCommand(popup, tcs, false);
-        }
+        DialogPopup? popup = null;
+        popup = new DialogPopup(null, title, text, acceptText, isDestructive ? PopupKit.ButtonKind.Danger : PopupKit.ButtonKind.Primary, () => Resolve(popup!, tcs, true), cancelText, () => Resolve(popup!, tcs, false));
         ApplySafeArea(popup);
         return ShowForResultAsync(popup, tcs, dismissed: false);
     }
 
-    public Task<bool> ActionModalAsync(string title, View content, string actionText, string? closeIcon = null)
+    public Task<bool> ActionModalAsync(string title, View content, string actionText, string? closeIcon = null, string cancelText = "Cancel")
     {
-        var popup = new ActionModalPopup
-        {
-            Title = title,
-            PopupContent = content,
-            ActionButtonText = actionText,
-            ShowActionButton = true,
-        };
-        if (closeIcon is not null) popup.CloseButtonIconText = closeIcon;
-        ApplySafeArea(popup);
         var tcs = new TaskCompletionSource<bool>();
-        popup.ActionButtonCommand = ResolveCommand(popup, tcs, true);
-        popup.CloseButtonCommand = ResolveCommand(popup, tcs, false);
+        SheetPopup? popup = null;
+        var footer = new VerticalStackLayout
+        {
+            Spacing = 8,
+            Children =
+            {
+                PopupKit.PillButton(actionText, PopupKit.ButtonKind.Primary, () => Resolve(popup!, tcs, true)),
+                PopupKit.PillButton(cancelText, PopupKit.ButtonKind.Ghost, () => Resolve(popup!, tcs, false)),
+            },
+        };
+        popup = new SheetPopup(title, content, footer, scrollBody: content is not (ScrollView or ItemsView));
         return ShowForResultAsync(popup, tcs, dismissed: false);
     }
 
     // ── Collection input ────────────────────────────────────────────────────
 
-    public async Task<IReadOnlyList<string>?> FormAsync(string title, string actionText,
-        IEnumerable<FormField> fields, string? text = null)
+    public Task<IReadOnlyList<string>?> FormAsync(string title, string actionText, IEnumerable<FormField> fields, string? text = null)
     {
-        var popup = new FormPopup
+        var tcs = new TaskCompletionSource<IReadOnlyList<string>?>();
+        var list = fields.ToList();
+        SheetPopup? popup = null;
+        void Submit() => Resolve<IReadOnlyList<string>?>(popup!, tcs, list.Select(field => field.Value ?? string.Empty).ToList());
+
+        var body = new VerticalStackLayout { Spacing = 12 };
+        if (text is not null)
+            body.Add(PopupKit.Text(text, 15, false, "TextSecondaryColor", TextAlignment.Start));
+
+        Entry? first = null;
+        for (var i = 0; i < list.Count; i++)
         {
-            Title = title,
-            ActionButtonText = actionText,
-            ShowActionButton = true,
-            Items = fields.ToList(),
-        };
-        if (text is not null) popup.Text = text;
-        ApplySafeArea(popup);
-        // FormPopup is a PopupResultPage<List<string>>; its default action button collects the
-        // field values and sets the result. A dismissal leaves the result null; an untouched field reads as empty.
-        var values = await Service.PushAsync(popup);
-        return values?.Select(value => value ?? string.Empty).ToList();
+            body.Add(PopupKit.FormEntry(list[i], i == list.Count - 1, Submit, out var input));
+            first ??= input;
+        }
+
+        var footer = PopupKit.PillButton(actionText, PopupKit.ButtonKind.Primary, Submit);
+        popup = new SheetPopup(title, body, footer, scrollBody: true, avoidKeyboard: true, focusTarget: first);
+        return ShowForResultAsync<IReadOnlyList<string>?>(popup, tcs, dismissed: null);
     }
 
-    public Task<bool> ListActionAsync(string title, IEnumerable items, DataTemplate itemTemplate,
-        string? actionText = null)
+    public Task<bool> ListActionAsync(string title, IEnumerable items, DataTemplate itemTemplate, string? actionText = null)
     {
-        var popup = new ListActionPopup
-        {
-            Title = title,
-            ItemsSource = items,
-            ItemDataTemplate = itemTemplate,
-            ShowActionButton = actionText is not null,
-        };
-        if (actionText is not null) popup.ActionButtonText = actionText;
         var tcs = new TaskCompletionSource<bool>();
-        popup.ActionButtonCommand = ResolveCommand(popup, tcs, true);
-        popup.CloseButtonCommand = ResolveCommand(popup, tcs, false);
-        ApplySafeArea(popup);
+        SheetPopup? popup = null;
+        var list = new VerticalStackLayout { Spacing = 4 };
+        BindableLayout.SetItemsSource(list, items);
+        BindableLayout.SetItemTemplate(list, itemTemplate);
+        var footer = actionText is null ? null : PopupKit.PillButton(actionText, PopupKit.ButtonKind.Primary, () => Resolve(popup!, tcs, true));
+        popup = new SheetPopup(title, list, footer, scrollBody: true);
         return ShowForResultAsync(popup, tcs, dismissed: false);
     }
 
     public Task<T?> OptionSheetAsync<T>(string title, IEnumerable<PopupOption<T>> options, string? closeIcon = null)
     {
-        var popup = new OptionSheetPopup
-        {
-            Title = title,
-            //ItemDataTemplate = (DataTemplate)Application.Current!.Resources["OptionSheetRowTemplate"],
-        };
-        if (closeIcon is not null) popup.CloseButtonIconText = closeIcon;
-
         var tcs = new TaskCompletionSource<T?>();
-        // Guards against a double pop if the option's Command fires more than once
-        // (custom template tap + popup's own tap handling).
-        var closed = false;
-        void Resolve(T? value)
+        SheetPopup? popup = null;
+        var body = new VerticalStackLayout { Spacing = 4 };
+        string? group = null;
+        var list = options.ToList();
+        var reserveIconSlot = list.Any(option => PopupKit.HasLeadingIcon(option.Icon));
+        foreach (var option in list)
         {
-            if (closed) return;
-            closed = true;
-            tcs.TrySetResult(value);
-            _ = Service.PopAsync(popup);
+            if (option.GroupName is not null && option.GroupName != group)
+                body.Add(PopupKit.GroupHeader(option.GroupName));
+
+            group = option.GroupName;
+            var value = option.Value;
+            body.Add(PopupKit.OptionRow(option.Text, option.Icon, option.IconColor, option.IsDestructive, reserveIconSlot, () => Resolve<T?>(popup!, tcs, value)));
         }
 
-        var items = new List<OptionSheetItem>();
-        foreach (var option in options)
-        {
-            var item = new OptionSheetItem
-            {
-                Text = option.Text,
-                //IsDestructive = option.IsDestructive,
-                Command = new Command(() => Resolve(option.Value)),
-            };
-            if (option.Icon is not null)
-                item.Icon = option.Icon;
-            if (option.IconColor is not null)
-                item.IconColor = option.IconColor;
-            if (option.GroupName is not null)
-                item.GroupName = option.GroupName;
-            items.Add(item);
-        }
-        popup.Items = items;
-        popup.CloseButtonCommand = new Command(() => Resolve(default));
-        ApplySafeArea(popup);
-        return ShowForResultAsync(popup, tcs, dismissed: default);
+        popup = new SheetPopup(title, body, scrollBody: true);
+        return ShowForResultAsync<T?>(popup, tcs, dismissed: default);
+    }
+
+    public Task<T?> CustomSheetAsync<T>(string? title, Func<Action<T?>, View> buildContent)
+    {
+        var tcs = new TaskCompletionSource<T?>();
+        SheetPopup? popup = null;
+        var content = buildContent(result => Resolve<T?>(popup!, tcs, result));
+        popup = new SheetPopup(title, content, scrollBody: content is not (ScrollView or ItemsView));
+        return ShowForResultAsync<T?>(popup, tcs, dismissed: default);
     }
 
     // ── Helpers ─────────────────────────────────────────────────────────────
-
-    /// <summary>Android phones: the modal card spans the screen width. Tablets and desktop keep the inset card.</summary>
-    private static void FillWidthOnPhones(PopupPage popup)
-    {
-#if ANDROID
-        if (DeviceInfo.Idiom != DeviceIdiom.Phone)
-            return;
-
-        // The card only exists once the popup's template is applied, so it is resized once it is loaded.
-        void OnLoaded(object? sender, EventArgs e)
-        {
-            popup.Loaded -= OnLoaded;
-            if (popup.ActualContent is not View card)
-                return;
-
-            card.HorizontalOptions = LayoutOptions.Fill;
-            card.Margin = new Thickness(0, card.Margin.Top, 0, card.Margin.Bottom);
-        }
-
-        popup.Loaded += OnLoaded;
-#endif
-    }
 
     /// <summary>
     /// Pads the popup by the system safe-area insets on every edge so its content (especially
@@ -225,7 +166,7 @@ public sealed class PopupPresenter : IPopupPresenter
         // zero those forwarded insets, leaving bottom-anchored popups behind the nav bar.
         // Reading RootWindowInsets from the DecorView is reliable regardless of what the
         // current page does with insets.
-        var insets = WindowSystemBarsInsetsDp();
+        var insets = PopupKit.SystemBarsInsetsDp();
         if (insets != default)
         {
             popup.Padding = new Thickness(insets.Left, insets.Top, insets.Right, insets.Bottom);
@@ -235,33 +176,12 @@ public sealed class PopupPresenter : IPopupPresenter
         popup.SafeAreaAsPadding = SafeAreaAsPadding.All;
     }
 
-#if ANDROID
-    private static Thickness WindowSystemBarsInsetsDp()
+    /// <summary>Completes <paramref name="tcs"/> once and closes <paramref name="popup"/>.</summary>
+    private static void Resolve<T>(PopupPage popup, TaskCompletionSource<T> tcs, T value)
     {
-        try
-        {
-            if (Microsoft.Maui.ApplicationModel.Platform.CurrentActivity?.Window?.DecorView is not { } decorView || decorView.RootWindowInsets is not { } rootInsets)
-                return default;
-
-            var compat = AndroidX.Core.View.WindowInsetsCompat.ToWindowInsetsCompat(rootInsets);
-            if (compat?.GetInsets(AndroidX.Core.View.WindowInsetsCompat.Type.SystemBars()) is not { } sys)
-                return default;
-
-            var density = decorView.Resources?.DisplayMetrics?.Density ?? 1f;
-            if (density <= 0) density = 1f;
-            return new Thickness(sys.Left / density, sys.Top / density, sys.Right / density, sys.Bottom / density);
-        }
-        catch { return default; }
+        tcs.TrySetResult(value);
+        _ = Service.PopAsync(popup);
     }
-#endif
-
-    /// <summary>Builds a button command that resolves <paramref name="tcs"/> then closes <paramref name="popup"/>.</summary>
-    private static Command ResolveCommand<T>(PopupPage popup, TaskCompletionSource<T> tcs, T value) =>
-        new(() =>
-        {
-            tcs.TrySetResult(value);
-            _ = Service.PopAsync(popup);
-        });
 
     /// <summary>
     /// Shows <paramref name="popup"/> and awaits its result. If the popup is dismissed without a
@@ -279,8 +199,7 @@ public sealed class PopupPresenter : IPopupPresenter
         Service.PopupPopped += OnPopped;
         try
         {
-            ApplySafeArea(popup);
-            FillWidthOnPhones(popup);
+            PopupTheme.Refresh();
             await Service.PushAsync(popup);
             return await tcs.Task;
         }

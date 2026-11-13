@@ -69,6 +69,7 @@ namespace MyToolkit.Services.Popups;
 ///   Placeholder        -> EntryPlaceholderColor     FormAsync field placeholders
 ///   Accent             -> PrimaryColor              action button (brand colour — usually bare, not themed)
 ///   AccentVariant      -> PrimaryVariantColor        pressed/variant shade of the above
+///   Danger             -> PopupDangerColor           destructive buttons/rows (falls back to a fixed red)
 ///   Font               -> AppFontFamily             body text font (literal value, not aliased)
 ///   FontSemibold       -> AppSemiBoldFamily          title / emphasis font (literal value)
 ///   IconFont           -> IconsFontFamily            icon glyph font (literal value)
@@ -79,6 +80,9 @@ namespace MyToolkit.Services.Popups;
 public static class PopupTheme
 {
     private const string OverridePrefix = "TK_Popup_";
+
+    private static Application? _app;
+    private static PopupPalette? _palette;
 
     /// <summary>(role, literal UXDivers key, palette accessor) for every themeable colour.</summary>
     private static readonly (string Role, string UxDiversKey, Func<PopupPalette, string?> Alias)[] ColorRoles =
@@ -94,7 +98,10 @@ public static class PopupTheme
         ("Placeholder", "EntryPlaceholderColor", p => p.Placeholder),
         ("Accent", "PrimaryColor", p => p.Accent),
         ("AccentVariant", "PrimaryVariantColor", p => p.AccentVariant),
+        ("Danger", PopupKit.DangerKey, p => p.Danger),
     ];
+
+    private static readonly Color FallbackDanger = Color.FromArgb("#E5484D");
 
     /// <summary>(role, literal UXDivers key, palette accessor) for the non-themed font/glyph keys
     /// — the palette value here is used as-is, not resolved as an alias.</summary>
@@ -123,9 +130,18 @@ public static class PopupTheme
         app.Resources.MergedDictionaries.Add(new DarkTheme());
         app.Resources.MergedDictionaries.Add(new PopupStyles());
 
+        _app = app;
+        _palette = palette;
         Apply(app, palette, app.RequestedTheme);
         app.RequestedThemeChanged += (_, e) =>
             MainThread.BeginInvokeOnMainThread(() => Apply(app, palette, e.RequestedTheme));
+    }
+
+    /// <summary>Re-applies the palette for the current OS theme; the theme-changed event can be missed on a live switch.</summary>
+    internal static void Refresh()
+    {
+        if (_app is { } app && _palette is { } palette)
+            Apply(app, palette, app.RequestedTheme);
     }
 
     private static void Apply(Application app, PopupPalette palette, AppTheme theme)
@@ -137,6 +153,10 @@ public static class PopupTheme
             if (TryResolveColor(app, role, alias(palette), themeSuffix, out var color))
                 app.Resources[uxDiversKey] = color;
         }
+
+        // Destructive actions always need some red, even when the app declares none.
+        if (!app.Resources.TryGetValue(PopupKit.DangerKey, out _))
+            app.Resources[PopupKit.DangerKey] = FallbackDanger;
 
         foreach (var (role, uxDiversKey, value) in StringRoles)
         {
