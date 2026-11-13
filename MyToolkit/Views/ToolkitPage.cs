@@ -337,7 +337,7 @@ public abstract class ToolkitPage : ContentPage
 
             if (sys is null)
                 return insets!;
-            double density = v.Resources?.DisplayMetrics?.Density ?? 1;
+            double density = v?.Resources?.DisplayMetrics?.Density ?? 1;
             if (density <= 0)
                 density = 1;
 
@@ -352,10 +352,11 @@ public abstract class ToolkitPage : ContentPage
             // Keep the TOP (status bar) inset intact, otherwise the page title/content
             // rides up under the status bar and the system clock.
             var keepTop = AndroidX.Core.Graphics.Insets.Of(sys.Left, sys.Top, sys.Right, 0);
-            return new AndroidX.Core.View.WindowInsetsCompat.Builder(insets!)
-                .SetInsets(AndroidX.Core.View.WindowInsetsCompat.Type.SystemBars(), keepTop)
-                .SetInsets(AndroidX.Core.View.WindowInsetsCompat.Type.Ime(), AndroidX.Core.Graphics.Insets.None!)
-                .Build();
+            // Statements, not a fluent chain: the builder mutates itself, and the bindings mark every chained return nullable.
+            var builder = new AndroidX.Core.View.WindowInsetsCompat.Builder(insets!);
+            builder.SetInsets(AndroidX.Core.View.WindowInsetsCompat.Type.SystemBars(), keepTop);
+            builder.SetInsets(AndroidX.Core.View.WindowInsetsCompat.Type.Ime(), AndroidX.Core.Graphics.Insets.None!);
+            return builder.Build() ?? insets!;
         }
     }
 #endif

@@ -121,8 +121,9 @@ public sealed class PopupPresenter : IPopupPresenter
         if (text is not null) popup.Text = text;
         ApplySafeArea(popup);
         // FormPopup is a PopupResultPage<List<string>>; its default action button collects the
-        // field values and sets the result. A dismissal leaves the result null.
-        return await Service.PushAsync(popup);
+        // field values and sets the result. A dismissal leaves the result null; an untouched field reads as empty.
+        var values = await Service.PushAsync(popup);
+        return values?.Select(value => value ?? string.Empty).ToList();
     }
 
     public Task<bool> ListActionAsync(string title, IEnumerable items, DataTemplate itemTemplate,
@@ -217,12 +218,13 @@ public sealed class PopupPresenter : IPopupPresenter
     {
         try
         {
-            var activity = Microsoft.Maui.ApplicationModel.Platform.CurrentActivity;
-            var decorView = activity?.Window?.DecorView;
-            var rootInsets = decorView?.RootWindowInsets;
-            if (rootInsets is null) return default;
+            if (Microsoft.Maui.ApplicationModel.Platform.CurrentActivity?.Window?.DecorView is not { } decorView || decorView.RootWindowInsets is not { } rootInsets)
+                return default;
+
             var compat = AndroidX.Core.View.WindowInsetsCompat.ToWindowInsetsCompat(rootInsets);
-            var sys = compat.GetInsets(AndroidX.Core.View.WindowInsetsCompat.Type.SystemBars());
+            if (compat?.GetInsets(AndroidX.Core.View.WindowInsetsCompat.Type.SystemBars()) is not { } sys)
+                return default;
+
             var density = decorView.Resources?.DisplayMetrics?.Density ?? 1f;
             if (density <= 0) density = 1f;
             return new Thickness(sys.Left / density, sys.Top / density, sys.Right / density, sys.Bottom / density);

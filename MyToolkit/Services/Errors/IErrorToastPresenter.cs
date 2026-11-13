@@ -5,8 +5,8 @@ namespace MyToolkit.Services.Errors;
 /// owns the <em>when</em> and the <em>text</em>; each app supplies the <em>how</em> by
 /// delegating to whatever presenter it already uses (e.g. UXDivers Floater, Snackbar).
 ///
-/// When <paramref name="onDetails"/> is non-null the presenter should show a tappable
-/// action button (labelled <paramref name="detailsLabel"/>) that opens the full error
+/// When <c>onDetails</c> is non-null the presenter should show a tappable
+/// action button (labelled <c>detailsLabel</c>) that opens the full error
 /// report. When null, a plain non-interactive notification is shown.
 /// </summary>
 public interface IErrorToastPresenter

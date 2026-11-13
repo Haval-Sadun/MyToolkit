@@ -2,7 +2,7 @@ namespace MyToolkit.Services.Errors;
 
 /// <summary>
 /// Delivers an error report by opening the device's native email client via
-/// <see cref="Email.Default.ComposeAsync"/>. This is the built-in fallback used
+/// <c>Email.Default.ComposeAsync</c>. This is the built-in fallback used
 /// when no custom <see cref="IErrorReporter"/> is registered in DI.
 /// Register it explicitly if you want to opt-in to the email-compose path without
 /// providing a custom reporter.

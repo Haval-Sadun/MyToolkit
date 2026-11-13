@@ -55,9 +55,7 @@ public static class ShellTabBarInsetFix
             var rootInsets = _activity.Window?.DecorView?.RootWindowInsets;
             if (rootInsets is null) return;
 
-            var navBarBottom = WindowInsetsCompat.ToWindowInsetsCompat(rootInsets)
-                .GetInsets(WindowInsetsCompat.Type.SystemBars())
-                .Bottom;
+            var navBarBottom = WindowInsetsCompat.ToWindowInsetsCompat(rootInsets)?.GetInsets(WindowInsetsCompat.Type.SystemBars())?.Bottom ?? 0;
 
             // View.SetPadding no-ops (no re-layout) when the values are unchanged, so this is
             // safe to call on every layout pass without feedback-looping GlobalLayout forever.

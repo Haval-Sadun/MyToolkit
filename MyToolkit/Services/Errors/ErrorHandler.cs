@@ -54,7 +54,7 @@ public class ErrorHandler
     public void Handle(Exception ex, string context) => _ = HandleAsync(ex, context);
 
     /// <summary>
-    /// Shows a toast for a non-throwing API error (from a <see cref="Result{T}"/> failure).
+    /// Shows a toast for a non-throwing API error (from a <c>Result&lt;T&gt;</c> failure).
     /// A "Details" button is available so the user can inspect the full report.
     /// </summary>
     public void Handle(IApiError error, string context)

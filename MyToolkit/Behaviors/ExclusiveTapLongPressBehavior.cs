@@ -89,7 +89,10 @@ public partial class ExclusiveTapLongPressBehavior : Behavior<View>
     protected override void OnDetachingFrom(View bindable)
     {
         _view = null;
-        bindable?.HandlerChanged -= _handlerChangedHandler;
+        if (bindable is null)
+            return;
+
+        bindable.HandlerChanged -= _handlerChangedHandler;
         DetachNative(bindable);
         base.OnDetachingFrom(bindable);
     }
