@@ -8,47 +8,57 @@ public partial class Notification : ObservableObject
 {
     [ObservableProperty]
     [property: JsonPropertyName("id")]
-    private long _id;
+    public partial long Id { get; set; }
 
     [ObservableProperty]
     [property: JsonPropertyName("type")]
-    private string _type = string.Empty;
+    public partial string Type { get; set; }
 
     [ObservableProperty]
     [property: JsonPropertyName("title")]
-    private string _title = string.Empty;
+    public partial string Title { get; set; }
 
     [ObservableProperty]
     [property: JsonPropertyName("message")]
-    private string _message = string.Empty;
+    public partial string Message { get; set; }
 
     [ObservableProperty]
     [property: JsonPropertyName("actor")]
-    private ChatSender? _actor;
+    public partial ChatSender? Actor { get; set; }
 
     [ObservableProperty]
     [property: JsonPropertyName("target_type")]
-    private string _targetType = string.Empty;
+    public partial string TargetType { get; set; }
 
     [ObservableProperty]
     [property: JsonPropertyName("target_id")]
-    private string _targetId = string.Empty;
+    public partial string TargetId { get; set; }
 
     [ObservableProperty]
     [property: JsonPropertyName("extra")]
-    private Dictionary<string, JsonElement>? _extra;
+    public partial Dictionary<string, JsonElement>? Extra { get; set; }
 
     [ObservableProperty]
     [property: JsonPropertyName("icon")]
-    private string _icon = string.Empty;
+    public partial string Icon { get; set; }
 
     [ObservableProperty]
     [property: JsonPropertyName("is_read")]
-    private bool _isRead;
+    public partial bool IsRead { get; set; }
 
     [ObservableProperty]
     [property: JsonPropertyName("created_at")]
-    private DateTime _createdAt;
+    public partial DateTime CreatedAt { get; set; }
+
+    public Notification()
+    {
+        Type = string.Empty;
+        Title = string.Empty;
+        Message = string.Empty;
+        TargetType = string.Empty;
+        TargetId = string.Empty;
+        Icon = string.Empty;
+    }
 
     [JsonIgnore]
     public string TimeAgo => Services.Time.TimeAgo.Relative(CreatedAt);

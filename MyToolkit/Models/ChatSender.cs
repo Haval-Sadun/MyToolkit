@@ -7,19 +7,28 @@ public partial class ChatSender : ObservableObject
 {
     [ObservableProperty]
     [property: JsonPropertyName("id")]
-    private string _id = string.Empty;
+    public partial string Id { get; set; }
 
     [ObservableProperty]
     [property: JsonPropertyName("username")]
-    private string _username = string.Empty;
+    public partial string Username { get; set; }
 
     [ObservableProperty]
     [property: JsonPropertyName("first_name")]
-    private string _firstName = string.Empty;
+    public partial string FirstName { get; set; }
 
     [ObservableProperty]
     [property: JsonPropertyName("last_name")]
-    private string _lastName = string.Empty;
+    public partial string LastName { get; set; }
+
+    public ChatSender()
+    {
+        Id = string.Empty;
+        Username = string.Empty;
+        FirstName = string.Empty;
+        LastName = string.Empty;
+        ProfessionalTitle = string.Empty;
+    }
 
     private string _profileImage = "profile_placeholder.jpg";
 
@@ -32,7 +41,7 @@ public partial class ChatSender : ObservableObject
 
     [ObservableProperty]
     [property: JsonPropertyName("professional_title")]
-    private string _professionalTitle = string.Empty;
+    public partial string ProfessionalTitle { get; set; }
 
     [JsonIgnore]
     public bool HasProfessionalTitle => !string.IsNullOrWhiteSpace(ProfessionalTitle);

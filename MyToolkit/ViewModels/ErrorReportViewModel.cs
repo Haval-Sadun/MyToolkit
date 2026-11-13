@@ -40,11 +40,11 @@ public partial class ErrorReportViewModel : ToolkitViewModel
 
     // ── Mutable ──────────────────────────────────────────────────────────────
     [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty]
-    private string _copyLabel;
+    public partial string CopyLabel { get; set; }
 
     /// <summary>User-typed description of what they were doing; included in the admin e-mail body.</summary>
     [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty]
-    private string _userDescription = string.Empty;
+    public partial string UserDescription { get; set; }
 
     public ErrorReportViewModel(
         ErrorReport report,
@@ -69,7 +69,8 @@ public partial class ErrorReportViewModel : ToolkitViewModel
         CloseLabel = text.Close;
         BrandingText = text.BrandingText;
         SendToAdminLabel = text.SendToAdminLabel;
-        _copyLabel = text.CopyDetails;
+        CopyLabel = text.CopyDetails;
+        UserDescription = string.Empty;
         CanSendToAdmin = reporter.CanReport;
     }
 

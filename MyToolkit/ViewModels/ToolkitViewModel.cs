@@ -14,13 +14,15 @@ public abstract partial class ToolkitViewModel : ObservableObject, ILifecycleAwa
 {
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsNotBusy))]
-    private bool isBusy;
+    public partial bool IsBusy { get; set; }
 
     [ObservableProperty]
-    private string errorMessage = string.Empty;
+    public partial string ErrorMessage { get; set; }
 
     [ObservableProperty]
-    private bool hasError;
+    public partial bool HasError { get; set; }
+
+    protected ToolkitViewModel() => ErrorMessage = string.Empty;
 
     public bool IsNotBusy => !IsBusy;
 
