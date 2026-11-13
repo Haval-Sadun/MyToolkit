@@ -147,7 +147,7 @@ public sealed class PopupPresenter : IPopupPresenter
         var tcs = new TaskCompletionSource<T?>();
         SheetPopup? popup = null;
         var content = buildContent(result => Resolve<T?>(popup!, tcs, result));
-        popup = new SheetPopup(title, content, scrollBody: content is not (ScrollView or ItemsView));
+        popup = new SheetPopup(title, content, (content as ISheetFooterProvider)?.Footer, scrollBody: content is not (ScrollView or ItemsView), manualKeyboard: true);
         return ShowForResultAsync<T?>(popup, tcs, dismissed: default);
     }
 
