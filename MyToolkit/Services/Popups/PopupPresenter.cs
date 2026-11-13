@@ -190,6 +190,28 @@ public sealed class PopupPresenter : IPopupPresenter
 
     // ── Helpers ─────────────────────────────────────────────────────────────
 
+    /// <summary>Android phones: the modal card spans the screen width. Tablets and desktop keep the inset card.</summary>
+    private static void FillWidthOnPhones(PopupPage popup)
+    {
+#if ANDROID
+        if (DeviceInfo.Idiom != DeviceIdiom.Phone)
+            return;
+
+        // The card only exists once the popup's template is applied, so it is resized once it is loaded.
+        void OnLoaded(object? sender, EventArgs e)
+        {
+            popup.Loaded -= OnLoaded;
+            if (popup.ActualContent is not View card)
+                return;
+
+            card.HorizontalOptions = LayoutOptions.Fill;
+            card.Margin = new Thickness(0, card.Margin.Top, 0, card.Margin.Bottom);
+        }
+
+        popup.Loaded += OnLoaded;
+#endif
+    }
+
     /// <summary>
     /// Pads the popup by the system safe-area insets on every edge so its content (especially
     /// bottom-anchored sheets) clears the Android gesture / 3-button navigation bar under the
@@ -258,6 +280,7 @@ public sealed class PopupPresenter : IPopupPresenter
         try
         {
             ApplySafeArea(popup);
+            FillWidthOnPhones(popup);
             await Service.PushAsync(popup);
             return await tcs.Task;
         }

@@ -46,7 +46,7 @@ public class ErrorHandler
     public Task HandleAsync(Exception ex, string? context = null)
     {
         var report = Build(ex, context);
-        LogReport(report);
+        LogReport(ex, context, report);
         return ShowToastAsync(FriendlyMessage(ex), report);
     }
 
@@ -66,12 +66,13 @@ public class ErrorHandler
 
     /// <summary>Logs with full detail but shows no UI. For unrecoverable background failures.</summary>
     public void HandleSilent(Exception ex, string context)
-        => LogReport(Build(ex, context));
+        => LogReport(ex, context, Build(ex, context));
 
     // ── Internals ──────────────────────────────────────────────────────────────
 
-    private void LogReport(ErrorReport report)
-        => _logger.Log("ERROR", $"{report.TraceId}\n{report.FullDetail}");
+    // Goes through LogException so it lands in errors.log with the stack and recent lines; the trace id lets a user's screenshot be matched to it.
+    private void LogReport(Exception ex, string? context, ErrorReport report)
+        => _logger.LogException(ex, string.IsNullOrWhiteSpace(context) ? $"unhandled trace={report.TraceId}" : $"{context} trace={report.TraceId}");
 
     private string FriendlyMessage(Exception ex) => ex switch
     {
