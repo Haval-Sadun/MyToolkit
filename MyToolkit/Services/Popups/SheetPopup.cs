@@ -17,6 +17,7 @@ internal sealed class SheetPopup : PopupPage
     private readonly ScrollView? _scroll;
     private readonly double _chrome;
     private readonly double _screenHeight;
+    private double _imeDip;
 #if ANDROID
     private Android.Views.View? _decorView;
 #endif
@@ -103,10 +104,37 @@ internal sealed class SheetPopup : PopupPage
     // The nav-bar height is already inside the IME inset, so the bottom padding drops while the keyboard is up.
     private void OnKeyboardChanged(double imeDip)
     {
+        _imeDip = imeDip;
         _card.Margin = new Thickness(0, 0, 0, imeDip);
         _card.Padding = CardPadding(imeDip);
         UpdateScrollCap(imeDip);
+#if ANDROID
+        // Some devices (tablets) also resize the window, which would lift the card twice: measure the real overlap once layout settled.
+        if (imeDip > 0)
+            Dispatcher.DispatchDelayed(TimeSpan.FromMilliseconds(300), CorrectLift);
+#endif
     }
+
+#if ANDROID
+    private void CorrectLift()
+    {
+        if (_imeDip <= 0 || _decorView is null || _card.Handler?.PlatformView is not Android.Views.View view)
+            return;
+
+        var density = view.Resources?.DisplayMetrics?.Density ?? 1;
+        var location = new int[2];
+        view.GetLocationOnScreen(location);
+        var cardBottom = location[1] + view.Height;
+        var screenHeight = view.Resources?.DisplayMetrics?.HeightPixels ?? 0;
+        var keyboardTop = screenHeight - _imeDip * density;
+        var needed = Math.Max(0, (cardBottom + _card.Margin.Bottom * density - keyboardTop) / density);
+        if (Math.Abs(needed - _card.Margin.Bottom) < 2)
+            return;
+
+        _card.Margin = new Thickness(0, 0, 0, needed);
+        UpdateScrollCap(Math.Max(needed, 0));
+    }
+#endif
 
     public override void OnAppearing()
     {
