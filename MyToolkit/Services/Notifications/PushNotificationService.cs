@@ -30,6 +30,8 @@ public class PushNotificationService : IAsyncDisposable
 
     private string? _registeredToken;
     private bool _wired;
+    private EventHandler? _loggedInHandler;
+    private EventHandler? _loggedOutHandler;
     private EventHandler<Plugin.Firebase.CloudMessaging.EventArgs.FCMTokenChangedEventArgs>? _tokenChangedHandler;
     private EventHandler<Plugin.Firebase.CloudMessaging.EventArgs.FCMNotificationReceivedEventArgs>? _notificationReceivedHandler;
 
@@ -47,8 +49,10 @@ public class PushNotificationService : IAsyncDisposable
         _logger = logger;
         _notifications = notifications;
         _endpoints = endpoints;
-        _auth.LoggedIn  += (_, _) => _ = RegisterAsync();
-        _auth.LoggedOut += (_, _) => _ = UnregisterAsync();
+        _loggedInHandler = (_, _) => _ = RegisterAsync();
+        _loggedOutHandler = (_, _) => _ = UnregisterAsync();
+        _auth.LoggedIn += _loggedInHandler;
+        _auth.LoggedOut += _loggedOutHandler;
     }
 
     /// <summary>Fetch the FCM token and register it with the backend.</summary>
@@ -146,6 +150,17 @@ public class PushNotificationService : IAsyncDisposable
 
     public virtual ValueTask DisposeAsync()
     {
+        if (_loggedInHandler is not null)
+        {
+            _auth.LoggedIn -= _loggedInHandler;
+            _loggedInHandler = null;
+        }
+        if (_loggedOutHandler is not null)
+        {
+            _auth.LoggedOut -= _loggedOutHandler;
+            _loggedOutHandler = null;
+        }
+        _wired = false;
         if (_tokenChangedHandler is not null)
         {
             _fcm.TokenChanged -= _tokenChangedHandler;
