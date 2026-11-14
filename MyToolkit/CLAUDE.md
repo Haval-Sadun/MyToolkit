@@ -38,7 +38,11 @@ There are no tests in this library — validation is done by building and runnin
 | `Services/Concurrency/` | `OrderedTaskQueue` (actor mailbox: one message at a time, in order), `BackgroundTaskTracker` (owned fire-and-forget work, cancelled and awaited on dispose), `SingleFlight<T>` (coalesces concurrent work per key) — platform-free (1.3.0) |
 | `Collections/` | `LeastRecentlyUsedTracker` (O(1) recency order), `LeastRecentlyUsedCache<T>` (size-capped LRU dictionary) — not thread-safe by design (1.3.0) |
 | `Services/` (root) | `ServiceHelper` (locator), `AppLogger` (rolling file log) |
-| `Controls/` | Reusable XAML controls (`CardView`) |
+| `Controls/` | Reusable controls: `CardView`, `IconButton`, `PillButton`, `FilterChip`, `SettingsRow`, `EdgeFade`, `DetailHeader` + `DetailTopBar` — themed through `ThemeColors`, so an app supplies `{Token}Light`/`{Token}Dark` colour resources (Material 3 roles) and the controls follow them |
+| `Controls/` detail pages | `DetailHeader` (list header: hero, title, subtitle link, caption, footer slot) and `DetailTopBar` (floating back button + slim bar that fades in on scroll, set `ScrollSource`) share one `DetailHeaderStyle`: `Hero`, `CollapsingHero`, `LargeTitle`, `PaletteHero`. `CoverFit` picks how the cover sits: `Fill` (full-bleed, default), `Square` (centred square, sharp on tablets) or `Fit` (whole cover) |
+| `Theme/` | `ThemeColors` (palette token lookup), `Motion` (shared durations/curves, honours Android's "Remove animations"), `Breakpoints` (`Wide` = 840 dip, width not orientation) |
+| `Services/Toasts/`, `Platforms/*/` | `AppToast` — swipe-dismissable `AndroidSnackbar` (host in the top modal window; apps may set `AnchorResolver`) and `WindowsBanner` |
+| `Logging/` | `LogExporter` (+ `LogExporterOptions`) packs errors.log and rolling logs for sharing; `ErrorLogParser` reads errors.log blocks |
 
 ### Key base classes
 

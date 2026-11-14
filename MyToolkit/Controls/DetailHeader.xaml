@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:tk="clr-namespace:MyToolkit.Controls"
+             x:Class="MyToolkit.Controls.DetailHeader">
+
+    <!-- Row 0 holds the hero and the title block on top of each other (hero styles) or the title block alone (large title); row 1 is the page's own footer, e.g. an action row. -->
+    <Grid RowDefinitions="Auto,Auto">
+
+        <Grid x:Name="HeroGrid" Grid.Row="0" HeightRequest="300">
+            <BoxView x:Name="HeroFill" />
+            <Label x:Name="GlyphLabel" FontFamily="MaterialIcons" FontSize="96" HorizontalOptions="Center" VerticalOptions="Center" />
+            <Image x:Name="HeroImage" Aspect="AspectFill" />
+            <tk:EdgeFade x:Name="HeroFade" Edge="Bottom" SurfaceToken="SurfaceContainer" HeightRequest="200" VerticalOptions="End" />
+        </Grid>
+
+        <VerticalStackLayout x:Name="TextBlock" Grid.Row="0" Spacing="2" VerticalOptions="End" Padding="20,0,20,12">
+            <Label x:Name="TitleLabel" FontFamily="OpenSansSemibold" MaxLines="2" LineBreakMode="TailTruncation" />
+            <Label x:Name="SubtitleLabel" FontSize="16" MaxLines="1" LineBreakMode="TailTruncation" HorizontalOptions="Start" Padding="0,4" />
+            <Label x:Name="CaptionLabel" FontSize="13" MaxLines="2" LineBreakMode="TailTruncation" />
+        </VerticalStackLayout>
+
+        <ContentView x:Name="FooterHost" Grid.Row="1" />
+    </Grid>
+</ContentView>

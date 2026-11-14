@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Grid xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+      xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+      xmlns:tk="clr-namespace:MyToolkit.Controls"
+      x:Class="MyToolkit.Controls.DetailTopBar"
+      HeightRequest="56"
+      VerticalOptions="Start"
+      InputTransparent="True"
+      CascadeInputTransparent="False"
+      ZIndex="1">
+
+    <!-- Slim bar: fades in with the small title once the header has scrolled away. Never takes touches itself. -->
+    <BoxView x:Name="BarFill" Opacity="0" InputTransparent="True" />
+    <Label x:Name="BarTitle" Opacity="0" Margin="64,0,16,0" VerticalOptions="Center" FontSize="18" FontFamily="OpenSansSemibold" MaxLines="1" LineBreakMode="TailTruncation" InputTransparent="True" />
+
+    <!-- The back button is always there: a scrim disc over a picture, a plain arrow once the bar is solid. -->
+    <Border x:Name="Disc" Margin="8" WidthRequest="40" HeightRequest="40" HorizontalOptions="Start" VerticalOptions="Start" StrokeThickness="0" StrokeShape="Ellipse" BackgroundColor="#66000000" InputTransparent="False">
+        <tk:IconButton x:Name="BackButton" Glyph="&#xe5c4;" GlyphSize="22" WidthRequest="40" HeightRequest="40" GlyphColor="White" />
+    </Border>
+</Grid>
