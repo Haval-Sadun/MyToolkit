@@ -18,6 +18,9 @@ internal sealed class SheetPopup : PopupPage
     private readonly double _chrome;
     private readonly double _screenHeight;
     private double _imeDip;
+#if WINDOWS
+    private readonly MyToolkit.Platforms.Windows.ModalFocusTrapGuard _focusTrapGuard = new();
+#endif
 #if ANDROID
     private Android.Views.View? _decorView;
 #endif
@@ -143,6 +146,10 @@ internal sealed class SheetPopup : PopupPage
         if (_manualKeyboard)
             AttachKeyboardListener();
 #endif
+#if WINDOWS
+        // Over a modal page (the Player) MAUI would veto focus into this sheet's text boxes.
+        _focusTrapGuard.Suspend(Handler?.PlatformView as Microsoft.UI.Xaml.DependencyObject, (Application.Current?.Windows.FirstOrDefault()?.Handler?.PlatformView as Microsoft.UI.Xaml.Window)?.Content);
+#endif
         if (_focusTarget is { } target)
             Dispatcher.DispatchDelayed(TimeSpan.FromMilliseconds(300), () => target.Focus());
     }
@@ -152,6 +159,9 @@ internal sealed class SheetPopup : PopupPage
         // A dismissed form (tap outside, back) must not leave the soft keyboard up with nothing to type into.
         _focusTarget?.Unfocus();
         HideSoftKeyboard();
+#if WINDOWS
+        _focusTrapGuard.Resume();
+#endif
 #if ANDROID
         DetachKeyboardListener();
 #endif
