@@ -25,7 +25,7 @@ public sealed class LogExporter(AppLogger logger, LogExporterOptions options)
         if (path is null)
             return false;
 
-        await Share.Default.RequestAsync(new ShareFileRequest { Title = $"{options.AppName} {AppInfo.Current.VersionString} logs", File = new ShareFile(path, "text/plain") });
+        await Share.Default.RequestAsync(new ShareFileRequest { Title = $"{options.AppName} {AppVersionSource.Current} logs", File = new ShareFile(path, "text/plain") });
         return true;
     }
 
@@ -109,7 +109,7 @@ public sealed class LogExporter(AppLogger logger, LogExporterOptions options)
                 File.Delete(old);
 
             using var writer = new StreamWriter(path, false, new UTF8Encoding(false));
-            writer.WriteLine($"{options.AppName} {AppInfo.Current.VersionString}");
+            writer.WriteLine($"{options.AppName} {AppVersionSource.Current}");
             writer.WriteLine($"OS: {DeviceInfo.Platform} {DeviceInfo.VersionString}");
             writer.WriteLine($"Device: {DeviceInfo.Manufacturer} {DeviceInfo.Model}");
             writer.WriteLine($"Session: {logger.SessionId}");

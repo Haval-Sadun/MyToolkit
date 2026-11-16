@@ -25,7 +25,7 @@ public class AppLogger : IDisposable
     {
         _logDir = Path.Combine(FileSystem.AppDataDirectory, "logs");
         SessionId = LogSession.NewId();
-        _appVersion = Safe(() => AppInfo.Current.VersionString);
+        _appVersion = AppVersionSource.Current;
         Func<DateTimeOffset> now = () => DateTimeOffset.Now;
 
         _rolling = new SizeRotatingFile(_logDir, "app", 1024 * 1024, 3);

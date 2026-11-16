@@ -1,6 +1,8 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
+using MyToolkit.Services;
 
 namespace MyToolkit.Platforms.Windows;
 
@@ -21,8 +23,13 @@ internal sealed class ModalFocusTrapGuard
             return;
 
         var container = FindAbove(start) ?? FindBelow(windowContent);
-        if (container is not null)
-            Invoke(container, "DisableModalFocusTrap", onlyIfActive: true);
+        if (container is null)
+        {
+            ReportUnavailable($"{ContainerTypeName} not found");
+            return;
+        }
+
+        Invoke(container, "DisableModalFocusTrap", onlyIfActive: true);
     }
 
     public void Resume()
@@ -67,25 +74,44 @@ internal sealed class ModalFocusTrapGuard
         return null;
     }
 
+    // The members are reached by name, which the trimmer cannot see: keep them in Release builds.
+    [DynamicDependency(DynamicallyAccessedMemberTypes.NonPublicFields | DynamicallyAccessedMemberTypes.NonPublicMethods, "Microsoft.Maui.Platform.WindowRootViewContainer", "Microsoft.Maui")]
     private void Invoke(object container, string method, bool onlyIfActive)
     {
         try
         {
             var type = container.GetType();
-            // Re-enabling a trap that was never active would trap focus for no modal.
-            if (onlyIfActive && type.GetField("_modalFocusTrapActive", Private)?.GetValue(container) is not true)
+            var trap = type.GetField("_modalFocusTrapActive", Private);
+            if (trap is null || type.GetField("_topPage", Private) is not { } topPage || type.GetMethod(method, Private, null, Type.EmptyTypes, null) is not { } target)
+            {
+                ReportUnavailable($"a member of {ContainerTypeName} is missing (looking for _modalFocusTrapActive, _topPage, {method})");
                 return;
+            }
 
-            if (type.GetMethod(method, Private, null, Type.EmptyTypes, null) is not { } target)
+            // Disabling is only needed while the trap is on; re-enabling only if the modal it guarded is still there.
+            if (onlyIfActive ? trap.GetValue(container) is not true : topPage.GetValue(container) is null)
                 return;
 
             target.Invoke(container, null);
             if (onlyIfActive)
                 _container = container;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            // Best effort: a MAUI version without these members just keeps its default focus behaviour.
+            // Best effort: a MAUI version these members changed on just keeps its default focus behaviour.
+            ReportUnavailable($"{method} failed: {ex.GetType().Name}");
         }
+    }
+
+    private static bool _unavailableReported;
+
+    /// <summary>Once per session: without it a MAUI upgrade silently brings back the sheet text boxes that cannot be focused.</summary>
+    private static void ReportUnavailable(string what)
+    {
+        if (_unavailableReported)
+            return;
+
+        _unavailableReported = true;
+        ServiceHelper.GetSafe<AppLogger>()?.LogWarning($"toolkit.focus_trap_unavailable: {what}");
     }
 }
