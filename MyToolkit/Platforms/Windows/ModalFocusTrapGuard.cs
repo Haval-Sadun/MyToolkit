@@ -88,8 +88,8 @@ internal sealed class ModalFocusTrapGuard
                 return;
             }
 
-            // Disabling is only needed while the trap is on; re-enabling only if the modal it guarded is still there.
-            if (onlyIfActive ? trap.GetValue(container) is not true : topPage.GetValue(container) is null)
+            // Disabling is only needed while the trap is on; re-enabling only if MAUI has not turned it back on itself and the modal it guarded is still there.
+            if (onlyIfActive ? trap.GetValue(container) is not true : trap.GetValue(container) is true || topPage.GetValue(container) is null)
                 return;
 
             target.Invoke(container, null);
@@ -103,15 +103,17 @@ internal sealed class ModalFocusTrapGuard
         }
     }
 
-    private static bool _unavailableReported;
+    private static readonly HashSet<string> Reported = [];
 
-    /// <summary>Once per session: without it a MAUI upgrade silently brings back the sheet text boxes that cannot be focused.</summary>
+    /// <summary>Each distinct cause once per session: without it a MAUI upgrade silently brings back the sheet text boxes that cannot be focused, and a harmless early cause must not hide a real later one.</summary>
     private static void ReportUnavailable(string what)
     {
-        if (_unavailableReported)
-            return;
+        lock (Reported)
+        {
+            if (!Reported.Add(what))
+                return;
+        }
 
-        _unavailableReported = true;
         ServiceHelper.GetSafe<AppLogger>()?.LogWarning($"toolkit.focus_trap_unavailable: {what}");
     }
 }
