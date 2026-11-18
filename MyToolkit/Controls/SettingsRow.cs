@@ -31,6 +31,7 @@ public sealed class SettingsRow : ContentView
     public static readonly BindableProperty CommandProperty = BindableProperty.Create(nameof(Command), typeof(ICommand), typeof(SettingsRow));
 
     private const string ChevronRight = "";
+    private const string ChevronLeft = "";
 
     private readonly Grid _root;
     private readonly Border _iconTile;
@@ -44,6 +45,13 @@ public sealed class SettingsRow : ContentView
 
     // True while the switch is being set from the bound value, so that does not echo back as a user toggle.
     private bool _syncing;
+
+    // Points the way the row opens: left under a right-to-left layout. Read from the effective direction, so no subscription is needed.
+    protected override void OnSizeAllocated(double width, double height)
+    {
+        base.OnSizeAllocated(width, height);
+        _chevron.Text = ((IVisualElementController)this).EffectiveFlowDirection.HasFlag(EffectiveFlowDirection.RightToLeft) ? ChevronLeft : ChevronRight;
+    }
 
     public SettingsRow()
     {
