@@ -19,7 +19,6 @@ public sealed class EdgeFade : BoxView
     public EdgeFade()
     {
         InputTransparent = true;
-        Color = Colors.Transparent;
         HeightRequest = 40;
     }
 
@@ -57,7 +56,8 @@ public sealed class EdgeFade : BoxView
             return;
 
         var clear = surface.WithAlpha(0);
-        Background = new LinearGradientBrush(
+        // Fill, not Background: a BoxView paints its own Fill, and Background can sit unseen behind it.
+        Fill = new LinearGradientBrush(
             Edge == FadeEdge.Top ? [new GradientStop(surface, 0), new GradientStop(clear, 1)] : [new GradientStop(clear, 0), new GradientStop(surface, 1)],
             new Point(0, 0),
             new Point(0, 1));
