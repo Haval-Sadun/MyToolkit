@@ -14,6 +14,16 @@ public static class ServiceHelper
     public static T Get<T>() where T : notnull => Services.GetRequiredService<T>();
 
     /// <summary>Non-throwing variant for use inside exception hooks.</summary>
-    public static T? GetSafe<T>() where T : class =>
-        IPlatformApplication.Current?.Services?.GetService(typeof(T)) as T;
+    public static T? GetSafe<T>() where T : class
+    {
+        try
+        {
+            return IPlatformApplication.Current?.Services?.GetService(typeof(T)) as T;
+        }
+        catch (ObjectDisposedException)
+        {
+            // The app is shutting down and the container is already gone.
+            return null;
+        }
+    }
 }
