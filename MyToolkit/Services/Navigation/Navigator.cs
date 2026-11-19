@@ -1,3 +1,4 @@
+using MyToolkit.Threading;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace MyToolkit.Services.Navigation;
@@ -16,6 +17,12 @@ public static class Navigator
 {
     // 0 = idle, 1 = a navigation is in flight. Interlocked makes the check atomic.
     private static int _navigating;
+
+    // Set while Navigator itself switches route, so that switch is not mistaken for someone else's.
+    private static volatile bool _routing;
+
+    /// <summary>A push or pop is running. A tab switch started now would collide with it inside Shell ("Pending Navigations still processing").</summary>
+    public static bool IsBusy => Volatile.Read(ref _navigating) != 0 && !_routing;
 
     private static INavigationDiagnostics? Diagnostics =>
         IPlatformApplication.Current?.Services.GetService<INavigationDiagnostics>();
@@ -39,7 +46,18 @@ public static class Navigator
         RunGuarded(nameof(PopModalAsync), nav => nav.PopModalAsync());
 
     public static Task GoToAsync(string route) =>
-        RunGuarded($"GoToAsync({route})", _ => Shell.Current!.GoToAsync(route));
+        RunGuarded($"GoToAsync({route})", async _ =>
+        {
+            _routing = true;
+            try
+            {
+                await Shell.Current!.GoToAsync(route);
+            }
+            finally
+            {
+                _routing = false;
+            }
+        });
 
     private static async Task RunGuarded(string op, Func<INavigation, Task> action)
     {
@@ -52,7 +70,7 @@ public static class Navigator
 
         try
         {
-            await MainThread.InvokeOnMainThreadAsync(async () =>
+            await UiThread.InvokeAsync(async () =>
             {
                 var nav = Shell.Current?.Navigation;
                 if (Shell.Current is null || nav is null)
@@ -62,7 +80,11 @@ public static class Navigator
                 }
 
                 Diagnostics?.Log($"Navigation '{op}'");
+                var started = System.Diagnostics.Stopwatch.GetTimestamp();
                 await action(nav);
+                var took = System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds;
+                if (took >= 150)
+                    Diagnostics?.Log($"Navigation '{op}' took {took:0} ms.");
             });
         }
         catch (Exception ex)

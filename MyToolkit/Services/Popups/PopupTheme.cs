@@ -1,3 +1,4 @@
+using MyToolkit.Threading;
 using UXDivers.Popups.Maui.Controls;
 
 namespace MyToolkit.Services.Popups;
@@ -134,7 +135,7 @@ public static class PopupTheme
         _palette = palette;
         Apply(app, palette, app.RequestedTheme);
         app.RequestedThemeChanged += (_, e) =>
-            MainThread.BeginInvokeOnMainThread(() => Apply(app, palette, e.RequestedTheme));
+            UiThread.Post(() => Apply(app, palette, e.RequestedTheme));
     }
 
     /// <summary>Re-applies the palette for the current OS theme; the theme-changed event can be missed on a live switch.</summary>

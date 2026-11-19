@@ -1,3 +1,4 @@
+using MyToolkit.Threading;
 using MyToolkit.ViewModels;
 
 namespace MyToolkit.Views;
@@ -13,7 +14,7 @@ public partial class ErrorReportPage : ToolkitPage
         vm.RequestClose += OnRequestClose;
     }
 
-    private void OnRequestClose() => MainThread.BeginInvokeOnMainThread(async () =>
+    private void OnRequestClose() => UiThread.Post(async () =>
         await Navigation.PopModalAsync());
 
     private async void OnCloseClicked(object? sender, EventArgs e)

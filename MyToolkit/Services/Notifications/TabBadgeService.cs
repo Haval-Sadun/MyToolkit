@@ -1,3 +1,4 @@
+using MyToolkit.Threading;
 namespace MyToolkit.Services.Notifications;
 
 public sealed partial class TabBadgeService : ITabBadgeService
@@ -9,8 +10,8 @@ public sealed partial class TabBadgeService : ITabBadgeService
     public void SetBadge(int tabIndex, int count)
     {
         if (!_attached) return;
-        if (MainThread.IsMainThread) RenderBadge(tabIndex, count);
-        else MainThread.BeginInvokeOnMainThread(() => RenderBadge(tabIndex, count));
+        if (UiThread.IsOnUiThread) RenderBadge(tabIndex, count);
+        else UiThread.Post(() => RenderBadge(tabIndex, count));
     }
 
     // Implemented per-platform in Platforms/{Android,iOS}. No-op on other platforms.

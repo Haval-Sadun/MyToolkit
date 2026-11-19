@@ -1,3 +1,4 @@
+using MyToolkit.Threading;
 using MyToolkit.Models;
 using MyToolkit.Services.Auth;
 using MyToolkit.Services.Net;
@@ -73,8 +74,8 @@ public class NotificationService
 
     private void Apply(int value)
     {
-        if (MainThread.IsMainThread) Set(value);
-        else MainThread.BeginInvokeOnMainThread(() => Set(value));
+        if (UiThread.IsOnUiThread) Set(value);
+        else UiThread.Post(() => Set(value));
     }
 
     private void Set(int value)

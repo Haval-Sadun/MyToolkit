@@ -1,3 +1,4 @@
+using MyToolkit.Threading;
 using System.Text;
 using MyToolkit.Views;
 
@@ -188,7 +189,7 @@ public class ErrorHandler
         if (_reportVisible) return;
         _reportVisible = true;
 
-        await MainThread.InvokeOnMainThreadAsync(async () =>
+        await UiThread.InvokeAsync(async () =>
         {
             try
             {

@@ -1,3 +1,4 @@
+using MyToolkit.Threading;
 using System.Windows.Input;
 
 namespace MyToolkit.Behaviors;
@@ -114,7 +115,7 @@ public partial class ExclusiveTapLongPressBehavior : Behavior<View>
         var cmd = TapCommand;
         var param = TapCommandParameter;
         if (cmd?.CanExecute(param) == true)
-            MainThread.BeginInvokeOnMainThread(() => cmd.Execute(param));
+            UiThread.Post(() => cmd.Execute(param));
     }
 
     private void FireLongPress()
@@ -123,7 +124,7 @@ public partial class ExclusiveTapLongPressBehavior : Behavior<View>
         var cmd = LongPressCommand;
         var param = LongPressCommandParameter;
         if (cmd?.CanExecute(param) == true)
-            MainThread.BeginInvokeOnMainThread(() => cmd.Execute(param));
+            UiThread.Post(() => cmd.Execute(param));
     }
 
     // Implemented in Platforms/Android and Platforms/iOS partials.

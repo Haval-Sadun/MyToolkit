@@ -1,10 +1,11 @@
+using MyToolkit.Threading;
 namespace MyToolkit.Services.Toasts;
 
 /// <summary>The one way an app shows a toast: confirmations and errors alike. A swipe-dismissable native snackbar on Android and a native banner on Windows (the CommunityToolkit one needs package identity); other platforms show nothing.</summary>
 public static class AppToast
 {
     /// <summary>Best-effort and fire-and-forget: a failed toast must never be mistaken for a failed action.</summary>
-    public static void Show(string message, Action? action = null, string? actionText = null, TimeSpan? duration = null) => MainThread.BeginInvokeOnMainThread(async () =>
+    public static void Show(string message, Action? action = null, string? actionText = null, TimeSpan? duration = null) => UiThread.Post(async () =>
     {
         try
         {
