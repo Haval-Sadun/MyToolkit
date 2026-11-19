@@ -35,6 +35,7 @@ There are no tests in this library — validation is done by building and runnin
 | `Services/Net/` | `ApiService` — JWT-authenticated HTTP client wrapper; `INetworkStatus`/`NetworkStatus` — online/unmetered over `Connectivity`, fail-open/fail-closed respectively (1.3.0) |
 | `Services/Popups/` | `IPopupPresenter` / `PopupPresenter` — all modal dialogs |
 | `Services/Time/` | `TimeAgo` — relative-time formatting |
+| `Storage/` | `SqliteBackup` (zip of a consistent `VACUUM INTO` snapshot + settings + manifest; staged swap at launch with WAL checkpoint, retries, size caps and a kept previous database), `SqliteSchemaUpgrader` (`PRAGMA user_version` steps in one immediate transaction), `PreferenceSnapshot` + `IPreferenceStore` (explicit-key settings export/import; `MauiPreferenceStore` is the platform one). Driver-agnostic ADO.NET: the app hands out the SQLite connections, so the library depends on no SQLite package. Platform-free except `MauiPreferenceStore`; unit-tested by ZagrosTune, which links the sources |
 | `Services/Concurrency/` | `OrderedTaskQueue` (actor mailbox: one message at a time, in order), `BackgroundTaskTracker` (owned fire-and-forget work, cancelled and awaited on dispose), `SingleFlight<T>` (coalesces concurrent work per key) — platform-free (1.3.0) |
 | `Collections/` | `LeastRecentlyUsedTracker` (O(1) recency order), `LeastRecentlyUsedCache<T>` (size-capped LRU dictionary) — not thread-safe by design (1.3.0) |
 | `Services/` (root) | `ServiceHelper` (locator), `AppLogger` (rolling file log) |
