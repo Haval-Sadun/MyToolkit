@@ -16,7 +16,7 @@ internal sealed class SheetPopup : PopupPage
     private readonly bool _manualKeyboard;
     private readonly ScrollView? _scroll;
     private readonly double _chrome;
-    private readonly double _screenHeight;
+    private double _screenHeight;
     private double _imeDip;
 #if WINDOWS
     private readonly MyToolkit.Platforms.Windows.ModalFocusTrapGuard _focusTrapGuard = new();
@@ -91,6 +91,25 @@ internal sealed class SheetPopup : PopupPage
         AppearingAnimation = new MoveInPopupAnimation { MoveDirection = MoveDirection.Bottom, Duration = 250 };
         DisappearingAnimation = new MoveOutPopupAnimation { MoveDirection = MoveDirection.Bottom, Duration = 200 };
         PopupContent = _card;
+    }
+
+    // The window, not the screen: a small window on a big monitor (or a split screen) must still be able to show the sheet, so the sheet and its scroll area are capped to the height the popup really has.
+    protected override void OnSizeAllocated(double width, double height)
+    {
+        base.OnSizeAllocated(width, height);
+        if (width > 0 && !PopupKit.IsPhone)
+            _card.WidthRequest = Math.Min(MaxWidth, width - Padding.Left - Padding.Right);
+
+        if (height <= 0)
+            return;
+
+        var available = height - Padding.Top;
+        if (Math.Abs(available - _screenHeight) < 1)
+            return;
+
+        _screenHeight = available;
+        _card.MaximumHeightRequest = available * MaxHeightFraction;
+        UpdateScrollCap(_imeDip);
     }
 
     private void UpdateScrollCap(double imeDip)
