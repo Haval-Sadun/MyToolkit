@@ -8,7 +8,7 @@ internal sealed class DialogPopup : PopupPage
 {
     private const double MaxWidth = 400;
 
-    public DialogPopup(string? icon, string? title, string message, string primaryText, PopupKit.ButtonKind primaryKind, Action onPrimary, string? secondaryText = null, Action? onSecondary = null)
+    public DialogPopup(string? icon, string? title, string message, string primaryText, PopupKit.ButtonKind primaryKind, Action onPrimary, string? secondaryText = null, Action? onSecondary = null, TextAlignment messageAlignment = TextAlignment.Center)
     {
         var stack = new VerticalStackLayout { Spacing = 12 };
         if (PopupKit.IconBadge(icon) is { } badge)
@@ -20,7 +20,7 @@ internal sealed class DialogPopup : PopupPage
         if (!string.IsNullOrEmpty(title))
             stack.Add(PopupKit.Text(title, 20, true, "TextColor", TextAlignment.Center));
 
-        stack.Add(PopupKit.Text(message, 15, false, "TextSecondaryColor", TextAlignment.Center));
+        stack.Add(PopupKit.Text(message, 15, false, "TextSecondaryColor", messageAlignment));
         stack.Add(BuildButtons(primaryText, primaryKind, onPrimary, secondaryText, onSecondary));
 
         var card = new Border

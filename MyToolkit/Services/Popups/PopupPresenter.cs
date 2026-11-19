@@ -40,17 +40,17 @@ public sealed class PopupPresenter : IPopupPresenter
 
     // ── Informational (single dismiss) ──────────────────────────────────────
 
-    public Task AlertAsync(string text, string? title = null, string? closeIcon = null, Color? closeIconColor = null, string? actionText = null)
-        => ShowAlertAsync(PopupKit.DefaultInfoIcon(), title, text, actionText);
+    public Task AlertAsync(string text, string? title = null, string? closeIcon = null, Color? closeIconColor = null, string? actionText = null, bool startAligned = false)
+        => ShowAlertAsync(PopupKit.DefaultInfoIcon(), title, text, actionText, startAligned ? TextAlignment.Start : TextAlignment.Center);
 
     public Task IconAlertAsync(string icon, string title, string text, string? actionText = null, Color? iconColor = null)
         => ShowAlertAsync(icon, title, text, actionText);
 
-    private static Task ShowAlertAsync(string? icon, string? title, string text, string? actionText)
+    private static Task ShowAlertAsync(string? icon, string? title, string text, string? actionText, TextAlignment alignment = TextAlignment.Center)
     {
         var tcs = new TaskCompletionSource<bool>();
         DialogPopup? popup = null;
-        popup = new DialogPopup(icon, title, text, actionText ?? "OK", PopupKit.ButtonKind.Primary, () => Resolve(popup!, tcs, true));
+        popup = new DialogPopup(icon, title, text, actionText ?? "OK", PopupKit.ButtonKind.Primary, () => Resolve(popup!, tcs, true), messageAlignment: alignment);
         ApplySafeArea(popup);
         return ShowForResultAsync(popup, tcs, dismissed: true);
     }

@@ -29,8 +29,9 @@ public interface IPopupPresenter
     /// <summary>
     /// Shows a dialog (optional title + text + one button reading <paramref name="actionText"/>, "OK" when null). Completes when dismissed.
     /// Text-first because the common case is a bare message: <c>AlertAsync(message)</c>.
+    /// <paramref name="startAligned"/> aligns the text to the start edge (a list of lines reads badly centred); false keeps it centred.
     /// </summary>
-    Task AlertAsync(string text, string? title = null, string? closeIcon = null, Color? closeIconColor = null, string? actionText = null);
+    Task AlertAsync(string text, string? title = null, string? closeIcon = null, Color? closeIconColor = null, string? actionText = null, bool startAligned = false);
 
     /// <summary>
     /// Shows a dialog with a prominent icon, title and text. The button reads
