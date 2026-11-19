@@ -22,9 +22,28 @@ public static class TransientPageNavigation
         await Navigator.PushAsync(page);
 
         if (Shell.Current?.Navigation.NavigationStack.Contains(page) == true)
+        {
             Pushed.Add(page);
+            page.NavigatedFrom += OnNavigatedFrom;
+        }
         else
+        {
             Dispose(page);
+        }
+    }
+
+    // A plain pop (or Android's back button) releases the page at once; Shell.OnNavigated stays as the net for pop-to-root and for any page this misses.
+    private static void OnNavigatedFrom(object? sender, NavigatedFromEventArgs e)
+    {
+        if (sender is not Page page || !Pushed.Contains(page))
+            return;
+
+        // Still on the stack: another page was pushed on top of it.
+        if (Shell.Current?.Navigation.NavigationStack.Contains(page) == true)
+            return;
+
+        Pushed.Remove(page);
+        Dispose(page);
     }
 
     /// <summary>Call from Shell.OnNavigated: disposes every pushed page no longer on any tab's stack — pop-to-root never raises the middle pages' OnNavigatedFrom.</summary>
@@ -41,5 +60,9 @@ public static class TransientPageNavigation
         }
     }
 
-    private static void Dispose(Page page) => (page.BindingContext as IDisposable)?.Dispose();
+    private static void Dispose(Page page)
+    {
+        page.NavigatedFrom -= OnNavigatedFrom;
+        (page.BindingContext as IDisposable)?.Dispose();
+    }
 }

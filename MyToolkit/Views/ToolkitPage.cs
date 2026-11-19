@@ -96,6 +96,9 @@ public abstract class ToolkitPage : ContentPage
     private Android.Views.View? _insetRoot;
     private InsetsListener? _insetsListener;
     private double _basePaddingBottom;
+
+    // Whether Start took over the bottom padding, so Stop gives it back whatever the tab-bar state says by then.
+    private bool _bottomPaddingApplied;
 #endif
 
     private int _lastStackDepth = 0;
@@ -212,6 +215,7 @@ public abstract class ToolkitPage : ContentPage
             return;
 
         _basePaddingBottom = Padding.Bottom;
+        _bottomPaddingApplied = true;
         if (!TryAttachInsetListener())
             Loaded += OnPageLoaded;
     }
@@ -227,11 +231,10 @@ public abstract class ToolkitPage : ContentPage
             return;
         }
 
-        if (!ApplyBottomInset)
-            return;
-
+        // Undo whatever Start did, even if ApplyBottomInset reads differently now (it follows the parent chain): a listener left on the shared content root keeps this page alive.
         Loaded -= OnPageLoaded;
-        DetachInsetListener();
+        if (_kbListenerAttached)
+            DetachInsetListener();
     }
 
     private static void SetWindowSoftInput(Android.Views.SoftInput mode)
@@ -307,8 +310,10 @@ public abstract class ToolkitPage : ContentPage
         _kbListenerAttached = false;
         if (KeyboardInsetTarget is { } target)
             target.Margin = new Thickness(0);
-        else if (ApplyBottomInset)
+        else if (_bottomPaddingApplied)
             Padding = new Thickness(Padding.Left, Padding.Top, Padding.Right, _basePaddingBottom);
+
+        _bottomPaddingApplied = false;
     }
 
     protected virtual void OnKeyboardChanged(double imeBottomDip, double navBottomDip)

@@ -48,7 +48,30 @@ public sealed class ImageDiskCache(HttpClient http, string folder, long maxBytes
         if (File.Exists(path))
             return Task.CompletedTask;
 
-        return _downloads.GetOrAdd(path, _ => DownloadAsync(url, path));
+        // Registered before the download starts: one that fails at once would otherwise remove its entry before it was added, and the finished task would stay for good.
+        var done = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var running = _downloads.GetOrAdd(path, done.Task);
+        if (!ReferenceEquals(running, done.Task))
+            return running;
+
+        _ = RunAsync();
+        return done.Task;
+
+        async Task RunAsync()
+        {
+            try
+            {
+                await DownloadAsync(url, path).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                warn?.Invoke($"image cache: could not fetch a cover ({ex.GetType().Name}).");
+            }
+            finally
+            {
+                done.TrySetResult();
+            }
+        }
     }
 
     private async Task DownloadAsync(string url, string path)

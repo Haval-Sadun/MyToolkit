@@ -27,6 +27,10 @@ internal sealed class SheetPopup : PopupPage
 
     public SheetPopup(string? title, View body, View? footer = null, bool scrollBody = false, bool avoidKeyboard = false, View? focusTarget = null, bool manualKeyboard = false)
     {
+#if WINDOWS
+        // Own event, so nothing outlives the sheet; covers a sheet torn down without OnDisappearing, which would leave the modal focus trap switched off.
+        HandlerChanged += OnHandlerChangedResumeFocusTrap;
+#endif
         _focusTarget = focusTarget;
         _manualKeyboard = manualKeyboard;
         var insets = PopupKit.SystemBarsInsetsDp();
@@ -172,6 +176,14 @@ internal sealed class SheetPopup : PopupPage
         if (_focusTarget is { } target)
             Dispatcher.DispatchDelayed(TimeSpan.FromMilliseconds(300), () => target.Focus());
     }
+
+#if WINDOWS
+    private void OnHandlerChangedResumeFocusTrap(object? sender, EventArgs e)
+    {
+        if (Handler is null)
+            _focusTrapGuard.Resume();
+    }
+#endif
 
     public override void OnDisappearing()
     {
