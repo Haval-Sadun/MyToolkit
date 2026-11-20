@@ -1,5 +1,7 @@
 using Microsoft.Maui.Controls.Shapes;
+using MyToolkit.Behaviors;
 using UXDivers.Popups.Maui;
+using UXDivers.Popups.Services;
 
 namespace MyToolkit.Services.Popups;
 
@@ -9,7 +11,10 @@ internal sealed class SheetPopup : PopupPage
     private const double MaxWidth = 560;
     private const double MaxHeightFraction = 0.85;
     private const double ContentPadding = 20;
+    private const double HandleRowHeight = 28;
 
+    private readonly DragToDismissBehavior _dragToClose = new();
+    private Color? _backdrop;
     private readonly View? _focusTarget;
     private readonly Border _card;
     private readonly double _bottomInset;
@@ -45,16 +50,22 @@ internal sealed class SheetPopup : PopupPage
         }
 
         var grid = new Grid { RowSpacing = 0, RowDefinitions = { new RowDefinition(GridLength.Auto), new RowDefinition(GridLength.Auto), new RowDefinition(GridLength.Auto), new RowDefinition(GridLength.Auto) } };
-        grid.Add(PopupKit.DragHandle(), 0, 0);
-        if (!string.IsNullOrEmpty(title))
+        // The header (handle and title) is what you hold to drag the sheet down; a transparent background keeps its whole area hit-testable.
+        var header = new Grid { BackgroundColor = Colors.Transparent, RowSpacing = 0, RowDefinitions = { new RowDefinition(HandleRowHeight), new RowDefinition(GridLength.Auto) } };
+        header.Add(PopupKit.DragHandle(), 0, 0);
+        var hasTitle = !string.IsNullOrEmpty(title);
+        if (hasTitle)
         {
-            var label = PopupKit.Text(title, 18, true, "TextColor", TextAlignment.Start);
-            label.Margin = new Thickness(0, 16, 0, 0);
-            grid.Add(label, 0, 1);
+            var label = PopupKit.Text(title!, 18, true, "TextColor", TextAlignment.Start);
+            label.Margin = new Thickness(0, 4, 0, 0);
+            header.Add(label, 0, 1);
         }
 
+        header.Behaviors.Add(_dragToClose);
+        grid.Add(header, 0, 0);
+
         var maxHeight = DeviceDisplay.MainDisplayInfo.Height / DeviceDisplay.MainDisplayInfo.Density * MaxHeightFraction;
-        body.Margin = new Thickness(0, 12, 0, 0);
+        body.Margin = new Thickness(0, hasTitle ? 12 : 0, 0, 0);
         // Auto rows don't shrink the body, so the scroll area is capped to what the fixed header and footer leave free.
         _screenHeight = DeviceDisplay.MainDisplayInfo.Height / DeviceDisplay.MainDisplayInfo.Density - insets.Top;
         _chrome = 112 + (footer is null ? 0 : 16 + Math.Max(footer.HeightRequest, PopupKit.ButtonHeight));
@@ -88,6 +99,12 @@ internal sealed class SheetPopup : PopupPage
             _card.HorizontalOptions = LayoutOptions.Center;
             _card.WidthRequest = MaxWidth;
         }
+
+        // Hold the header and drag down, as in Flutter: the sheet follows, the backdrop fades, and past half (or flung) it closes.
+        _dragToClose.Target = _card;
+        _dragToClose.DragChanged += OnDragChanged;
+        _dragToClose.Settled += OnDragSettled;
+        _dragToClose.Dismissed += OnDragDismissed;
 
         this.SetDynamicResource(BackgroundColorProperty, "PopupBackdropColor");
         CloseWhenBackgroundIsClicked = true;
@@ -125,7 +142,35 @@ internal sealed class SheetPopup : PopupPage
         _scroll.MaximumHeightRequest = Math.Max(120, available - _chrome - (imeDip > 0 ? 0 : _bottomInset));
     }
 
-    private Thickness CardPadding(double imeDip) => new(ContentPadding, 12, ContentPadding, ContentPadding + (imeDip > 0 ? 0 : _bottomInset));
+    // No top padding: the handle row is tall enough to hold, and sits where the padding used to be.
+    private Thickness CardPadding(double imeDip) => new(ContentPadding, 0, ContentPadding, ContentPadding + (imeDip > 0 ? 0 : _bottomInset));
+
+    private void OnDragChanged(object? sender, DragToDismissEventArgs e) => SetBackdrop(1 - e.Fraction);
+
+    private void OnDragSettled(object? sender, EventArgs e) => SetBackdrop(1);
+
+    // Gone already: the pop's own slide-out must not draw the card again.
+    private void OnDragDismissed(object? sender, EventArgs e)
+    {
+        _card.IsVisible = false;
+        _ = IPopupService.Current.PopAsync(this);
+    }
+
+    // Fades the dimmed backdrop with the drag; 1 puts the themed colour back.
+    private void SetBackdrop(double left)
+    {
+        if (left >= 1)
+        {
+            this.SetDynamicResource(BackgroundColorProperty, "PopupBackdropColor");
+            return;
+        }
+
+        if (_backdrop is null && Application.Current?.Resources.TryGetValue("PopupBackdropColor", out var found) == true && found is Color color)
+            _backdrop = color;
+
+        if (_backdrop is { } backdrop)
+            BackgroundColor = backdrop.WithAlpha((float)(backdrop.Alpha * left));
+    }
 
     // The nav-bar height is already inside the IME inset, so the bottom padding drops while the keyboard is up.
     private void OnKeyboardChanged(double imeDip)
@@ -187,6 +232,9 @@ internal sealed class SheetPopup : PopupPage
 
     public override void OnDisappearing()
     {
+        _dragToClose.DragChanged -= OnDragChanged;
+        _dragToClose.Settled -= OnDragSettled;
+        _dragToClose.Dismissed -= OnDragDismissed;
         // A dismissed form (tap outside, back) must not leave the soft keyboard up with nothing to type into.
         _focusTarget?.Unfocus();
         HideSoftKeyboard();
