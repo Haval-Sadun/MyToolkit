@@ -245,7 +245,10 @@ public sealed class DragToDismissBehavior : Behavior<View>
     {
         _started = true;
         if (MoveTarget)
+        {
             view.CancelAnimations();
+            DragLayer.Hold(view);
+        }
 
         DragStarted?.Invoke(this, EventArgs.Empty);
     }
@@ -284,6 +287,7 @@ public sealed class DragToDismissBehavior : Behavior<View>
         }
         finally
         {
+            DragLayer.Release(view);
             _settling = false;
             DragEnded?.Invoke(this, EventArgs.Empty);
         }
