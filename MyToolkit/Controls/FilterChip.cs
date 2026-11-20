@@ -22,7 +22,8 @@ public sealed class FilterChip : ContentView
 
     public FilterChip()
     {
-        _label = new Label { FontSize = 14, VerticalOptions = LayoutOptions.Center };
+        // One line, centred: the taller line height of a script like Arabic must not make its chip taller than the others.
+        _label = new Label { FontSize = 14, MaxLines = 1, LineBreakMode = LineBreakMode.NoWrap, VerticalOptions = LayoutOptions.Center, VerticalTextAlignment = TextAlignment.Center };
 
         _chip = new Border
         {
@@ -30,6 +31,9 @@ public sealed class FilterChip : ContentView
             StrokeShape = new RoundRectangle { CornerRadius = 8 },
             Padding = new Thickness(16, 0),
             HeightRequest = 36,
+            MinimumHeightRequest = 36,
+            MaximumHeightRequest = 36,
+            VerticalOptions = LayoutOptions.Center,
             Content = _label,
         };
 
