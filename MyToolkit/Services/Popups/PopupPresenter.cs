@@ -1,5 +1,6 @@
 using System.Collections;
 
+using MyToolkit.Theme;
 using UXDivers.Popups;
 using UXDivers.Popups.Maui;
 using UXDivers.Popups.Maui.Controls;
@@ -200,6 +201,8 @@ public sealed class PopupPresenter : IPopupPresenter
         try
         {
             PopupTheme.Refresh();
+            // A popup is a page of its own, outside the shell the chosen language laid out right to left (or left to right): without this its start-aligned text and button order ignore the app's direction.
+            popup.FlowDirection = Direction.IsRightToLeft ? FlowDirection.RightToLeft : FlowDirection.LeftToRight;
             await Service.PushAsync(popup);
             return await tcs.Task;
         }
