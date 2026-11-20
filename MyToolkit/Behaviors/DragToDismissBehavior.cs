@@ -8,11 +8,12 @@ namespace MyToolkit.Behaviors;
 /// <param name="Distance">Dip dragged in the dismiss direction (never negative).</param>
 /// <param name="Fraction">How far through the dragged view's size that is, 0 to 1.</param>
 /// <param name="ReachedThreshold">Whether letting go now would dismiss it (by distance; a fling can also dismiss).</param>
-public sealed record DragToDismissEventArgs(double Distance, double Fraction, bool ReachedThreshold);
+public readonly record struct DragToDismissEventArgs(double Distance, double Fraction, bool ReachedThreshold);
 
 /// <summary>
 /// Hold a view (a sheet's handle or header) and drag: <see cref="Target"/> follows the finger; let go far or fast enough and it slides away and <see cref="Dismissed"/> fires, otherwise it springs back.
 /// Attach to the view that is held, name what moves with <see cref="Target"/> (default: the held view itself), and do the actual hiding in <see cref="Dismissed"/> or <see cref="DismissCommand"/>.
+/// It also serves a drag that opens something: set <see cref="Direction"/> to the way it opens, <see cref="MoveTarget"/> to false, <see cref="StartDistance"/> and <see cref="Extent"/>, and move the opening view yourself from <see cref="DragChanged"/>; "dismissed" then means "far or fast enough".
 /// <code>&lt;Grid.Behaviors&gt;&lt;tk:DragToDismissBehavior Target="{x:Reference Sheet}" DismissCommand="{Binding HideCommand}" /&gt;&lt;/Grid.Behaviors&gt;</code>
 /// </summary>
 public sealed class DragToDismissBehavior : Behavior<View>
@@ -28,12 +29,16 @@ public sealed class DragToDismissBehavior : Behavior<View>
     public static readonly BindableProperty IsEnabledProperty = BindableProperty.Create(nameof(IsEnabled), typeof(bool), typeof(DragToDismissBehavior), true);
     public static readonly BindableProperty ResetAfterDismissProperty = BindableProperty.Create(nameof(ResetAfterDismiss), typeof(bool), typeof(DragToDismissBehavior), true);
     public static readonly BindableProperty DismissCommandProperty = BindableProperty.Create(nameof(DismissCommand), typeof(ICommand), typeof(DragToDismissBehavior));
+    public static readonly BindableProperty MoveTargetProperty = BindableProperty.Create(nameof(MoveTarget), typeof(bool), typeof(DragToDismissBehavior), true);
+    public static readonly BindableProperty StartDistanceProperty = BindableProperty.Create(nameof(StartDistance), typeof(double), typeof(DragToDismissBehavior), 0d);
+    public static readonly BindableProperty ExtentProperty = BindableProperty.Create(nameof(Extent), typeof(double), typeof(DragToDismissBehavior), 0d);
 
     private readonly PanGestureRecognizer _pan = new();
-    private readonly DragVelocity _velocity = new();
+    private readonly PanVelocityTracker _velocity = new();
     private View? _held;
     private double _distance;
     private bool _settling;
+    private bool _started;
 
     /// <summary>What moves with the finger; null means the held view.</summary>
     public View? Target
@@ -108,7 +113,28 @@ public sealed class DragToDismissBehavior : Behavior<View>
         set => SetValue(DismissCommandProperty, value);
     }
 
-    /// <summary>A finger went down and began to drag.</summary>
+    /// <summary>False when something else moves with the finger (a page being opened by the drag): the behavior then only measures the drag and reports it, and the caller animates in <see cref="Dismissed"/> and <see cref="Settled"/>.</summary>
+    public bool MoveTarget
+    {
+        get => (bool)GetValue(MoveTargetProperty);
+        set => SetValue(MoveTargetProperty, value);
+    }
+
+    /// <summary>How far (dip) the finger must travel in the drag direction, mostly along it, before the drag counts. 0 means it counts at once.</summary>
+    public double StartDistance
+    {
+        get => (double)GetValue(StartDistanceProperty);
+        set => SetValue(StartDistanceProperty, value);
+    }
+
+    /// <summary>The length (dip) the close distance is a share of; 0 means measure <see cref="Target"/>. Needed when nothing is moved by the behavior.</summary>
+    public double Extent
+    {
+        get => (double)GetValue(ExtentProperty);
+        set => SetValue(ExtentProperty, value);
+    }
+
+    /// <summary>A finger went down and began to drag (after <see cref="StartDistance"/>, if one is set).</summary>
     public event EventHandler? DragStarted;
 
     /// <summary>The finger moved and the target is already where it belongs; use this for a fade or a haptic tick.</summary>
@@ -139,7 +165,17 @@ public sealed class DragToDismissBehavior : Behavior<View>
         base.OnDetachingFrom(bindable);
     }
 
-    private DragDismissRules Rules => new(CloseProgress, MinimumCloseDistance, FlingVelocity, MinimumFlingDistance);
+    // Built once per setting change, not on every move of the finger.
+    private DragDismissRules? _rules;
+
+    private DragDismissRules Rules => _rules ??= new(CloseProgress, MinimumCloseDistance, FlingVelocity, MinimumFlingDistance);
+
+    protected override void OnPropertyChanged(string? propertyName = null)
+    {
+        base.OnPropertyChanged(propertyName);
+        if (propertyName is nameof(CloseProgress) or nameof(MinimumCloseDistance) or nameof(FlingVelocity) or nameof(MinimumFlingDistance))
+            _rules = null;
+    }
 
     private bool Vertical => Direction is DragDirection.Down or DragDirection.Up;
 
@@ -148,10 +184,13 @@ public sealed class DragToDismissBehavior : Behavior<View>
 
     private double Along(double totalX, double totalY) => Sign * (Vertical ? totalY : totalX);
 
-    private double Extent(View view) => Vertical ? view.Height : view.Width;
+    private double ExtentOf(View view) => Extent > 0 ? Extent : Vertical ? view.Height : view.Width;
 
     private void Place(View view, double distance)
     {
+        if (!MoveTarget)
+            return;
+
         if (Vertical)
             view.TranslationY = Sign * distance;
         else
@@ -168,26 +207,47 @@ public sealed class DragToDismissBehavior : Behavior<View>
         switch (e.StatusType)
         {
             case GestureStatus.Started:
-                view.CancelAnimations();
                 _velocity.Reset();
                 _distance = 0;
-                DragStarted?.Invoke(this, EventArgs.Empty);
+                _started = false;
+                if (StartDistance <= 0)
+                    Begin(view);
+
                 break;
 
             case GestureStatus.Running:
-                _distance = Math.Max(0, Along(e.TotalX, e.TotalY));
+                var along = Along(e.TotalX, e.TotalY);
+                // Not a drag yet: too short, or more across than along.
+                if (!_started && (along < StartDistance || along <= Math.Abs(Vertical ? e.TotalX : e.TotalY)))
+                    break;
+
+                if (!_started)
+                    Begin(view);
+
+                _distance = Math.Max(0, along);
                 _velocity.Add(_distance, Stopwatch.GetTimestamp());
                 Place(view, _distance);
-                var extent = Extent(view);
+                var extent = ExtentOf(view);
                 DragChanged?.Invoke(this, new DragToDismissEventArgs(_distance, DragDismissRules.Fraction(_distance, extent), Rules.HasReachedClose(_distance, extent)));
                 break;
 
             // The release event often reports no distance on Android, so the last position seen while dragging decides.
             case GestureStatus.Completed:
             case GestureStatus.Canceled:
-                await FinishAsync(view, Math.Max(_distance, Along(e.TotalX, e.TotalY)));
+                if (_started)
+                    await FinishAsync(view, Math.Max(_distance, Along(e.TotalX, e.TotalY)));
+
                 break;
         }
+    }
+
+    private void Begin(View view)
+    {
+        _started = true;
+        if (MoveTarget)
+            view.CancelAnimations();
+
+        DragStarted?.Invoke(this, EventArgs.Empty);
     }
 
     private async Task FinishAsync(View view, double distance)
@@ -195,11 +255,14 @@ public sealed class DragToDismissBehavior : Behavior<View>
         _settling = true;
         try
         {
-            var extent = Extent(view);
-            if (Rules.ShouldDismiss(distance, _velocity.Measure(Stopwatch.GetTimestamp(), Stopwatch.Frequency), extent))
+            var extent = ExtentOf(view);
+            var velocity = _velocity.Velocity(Stopwatch.GetTimestamp(), Stopwatch.Frequency);
+            if (Rules.ShouldDismiss(distance, velocity, extent))
             {
-                if (!Motion.Reduced)
-                    await SlideAsync(view, Math.Max(extent, distance), SlideOutDuration, Easing.CubicIn);
+                var goal = Math.Max(extent, distance);
+                var slide = DragDismissRules.SettleMilliseconds(goal - distance, velocity, SlideOutDuration);
+                if (MoveTarget && !Motion.Reduced && slide > 0)
+                    await SlideAsync(view, goal, slide, Easing.CubicIn);
 
                 Dismissed?.Invoke(this, EventArgs.Empty);
                 if (DismissCommand is { } command && command.CanExecute(null))
@@ -211,10 +274,11 @@ public sealed class DragToDismissBehavior : Behavior<View>
                 return;
             }
 
-            if (Motion.Reduced)
+            var snap = DragDismissRules.SettleMilliseconds(distance, velocity, SnapBackDuration);
+            if (Motion.Reduced || !MoveTarget || snap == 0)
                 Place(view, 0);
             else
-                await SlideAsync(view, 0, SnapBackDuration, Easing.CubicOut);
+                await SlideAsync(view, 0, snap, Easing.CubicOut);
 
             Settled?.Invoke(this, EventArgs.Empty);
         }

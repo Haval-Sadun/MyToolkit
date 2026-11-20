@@ -15,6 +15,7 @@ internal sealed class SheetPopup : PopupPage
 
     private readonly DragToDismissBehavior _dragToClose = new();
     private Color? _backdrop;
+    private double _backdropLeft = 1;
     private readonly View? _focusTarget;
     private readonly Border _card;
     private readonly double _bottomInset;
@@ -159,6 +160,11 @@ internal sealed class SheetPopup : PopupPage
     // Fades the dimmed backdrop with the drag; 1 puts the themed colour back.
     private void SetBackdrop(double left)
     {
+        // Repainting the whole backdrop on every move is wasted work: a fade in 2% steps looks the same.
+        if (left < 1 && Math.Abs(left - _backdropLeft) < 0.02)
+            return;
+
+        _backdropLeft = left;
         if (left >= 1)
         {
             this.SetDynamicResource(BackgroundColorProperty, "PopupBackdropColor");
