@@ -33,7 +33,6 @@ public sealed class EmptyStateView : ContentView
         ThemeColors.Set(_glyph, Label.TextColorProperty, "OnSurfaceVariant");
         ThemeColors.Set(_title, Label.TextColorProperty, "OnSurface");
         ThemeColors.Set(_message, Label.TextColorProperty, "OnSurfaceVariant");
-        SemanticProperties.SetHeadingLevel(_title, SemanticHeadingLevel.Level1);
 
         // The glyph is decoration; the title says what the screen is saying.
         AutomationProperties.SetIsInAccessibleTree(_glyph, false);
