@@ -39,13 +39,11 @@ public sealed class OptionsGroup(IReadOnlyList<OptionsEntry> items)
     public IReadOnlyList<OptionsEntry> Items { get; } = items;
 }
 
-/// <summary>What the menu shows: the item, an optional big Play, a grid of quick tiles and the rest as grouped rows. Built by <c>SongMenuAction</c>, which decides which actions apply (music, radio or book).
+/// <summary>What the menu shows: the item, an optional big Play, a grid of quick tiles and the rest as grouped rows. Built by <c>PickActionAsync</c> from the actions the caller offers.
 /// The layout follows how many actions there are: a menu with only a couple of plain rows turns them into tiles too, so a short menu is not a few lonely boxes; a long one keeps the tiles on top and the grouped rows below.</summary>
 public sealed class OptionsSheetViewModel
 {
-    private const int MaxColumns = 4;
     private const string CoverDp = "52";
-    private const int FoldAtMostRows = 2;
 
     public OptionsSheetViewModel(string title, string subtitle, string? thumbnailUrl, string placeholderGlyph, OptionsEntry? play, IReadOnlyList<OptionsEntry> quick, IReadOnlyList<OptionsGroup> groups)
     {
@@ -56,19 +54,15 @@ public sealed class OptionsSheetViewModel
         PlaceholderGlyph = placeholderGlyph;
         Play = play;
 
-        // Only a couple of plain rows left (and nothing red): they sit better as tiles than as lone cards.
+        // The rules live in OptionsLayout, where they are tested.
         var rows = groups.Sum(group => group.Items.Count);
-        var fold = rows is > 0 and <= FoldAtMostRows && groups.All(group => group.Items.All(item => !item.IsDestructive));
+        var fold = OptionsLayout.ShouldFold(rows, groups.Any(group => group.Items.Any(item => item.IsDestructive)));
         Quick = fold ? quick.Concat(groups.SelectMany(group => group.Items)).ToList() : quick;
         Groups = fold ? [] : groups;
 
-        // Evenly filled rows: 2 tiles are halves, 3 are thirds, 4 are quarters, 5-6 wrap into two rows of 3, more into rows of 4.
-        Columns = Quick.Count switch { 0 => 0, <= MaxColumns => Quick.Count, <= 6 => 3, _ => MaxColumns };
+        Columns = OptionsLayout.Columns(Quick.Count);
         for (var i = 0; i < Quick.Count; i++)
-        {
-            Quick[i].GridRow = i / Columns;
-            Quick[i].GridColumn = i % Columns;
-        }
+            (Quick[i].GridRow, Quick[i].GridColumn) = OptionsLayout.Cell(i, Columns);
     }
 
     public string Title { get; }
@@ -91,7 +85,7 @@ public sealed class OptionsSheetViewModel
 
     public int Columns { get; }
 
-    public int TileRows => Columns == 0 ? 0 : (Quick.Count + Columns - 1) / Columns;
+    public int TileRows => OptionsLayout.Rows(Quick.Count);
 
     public bool HasPlay => Play is not null;
 

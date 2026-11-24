@@ -6,7 +6,7 @@
              x:Class="MyToolkit.Controls.Sheets.ToggleSheetView"
              x:DataType="controls:ToggleSheetViewModel">
 
-    <!-- OnPrimaryColor is put in Resources by SheetContentView (palette-derived). -->
+    <!-- OnPrimaryColor is put in Resources by SheetContentView (palette-derived): it colors the pinned Done button. -->
     <controls:SheetContentView.Resources>
         <Button x:Key="Footer" x:DataType="controls:ToggleSheetViewModel" Text="{Binding DoneText}" Command="{Binding DoneCommand}"
                 HeightRequest="48" CornerRadius="24" FontSize="16" Padding="16,0" FontFamily="{DynamicResource AppSemiBoldFamily}" BackgroundColor="{DynamicResource PrimaryColor}" />
@@ -27,33 +27,12 @@
                             <Grid.GestureRecognizers>
                                 <TapGestureRecognizer Command="{Binding ToggleCommand}" />
                             </Grid.GestureRecognizers>
-                            <Border WidthRequest="40" HeightRequest="40" StrokeThickness="0" VerticalOptions="Center" IsVisible="{Binding HasBadge}" BackgroundColor="{DynamicResource BackgroundSecondaryColor}">
-                                <Border.StrokeShape>
-                                    <RoundRectangle CornerRadius="10" />
-                                </Border.StrokeShape>
-                                <Grid>
-                                    <Label Text="{Binding Badge}" IsVisible="{Binding BadgeIsIcon}" FontFamily="MaterialIcons" FontSize="22" HorizontalOptions="Center" VerticalOptions="Center" TextColor="{DynamicResource TextSecondaryColor}" />
-                                    <Label Text="{Binding Badge}" IsVisible="{Binding BadgeIsText}" FontSize="13" HorizontalOptions="Center" VerticalOptions="Center" FontFamily="{DynamicResource AppSemiBoldFamily}" TextColor="{DynamicResource TextColor}" />
-                                </Grid>
-                            </Border>
+                            <controls:SheetBadge Badge="{Binding Badge}" IsIcon="{Binding BadgeIsIcon}" Size="40" />
                             <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="1">
                                 <Label Text="{Binding Title}" FontSize="16" MaxLines="1" LineBreakMode="TailTruncation" FontFamily="{DynamicResource AppFontFamily}" TextColor="{DynamicResource TextColor}" />
                                 <Label Text="{Binding Detail}" IsVisible="{Binding HasDetail}" FontSize="12" MaxLines="1" LineBreakMode="TailTruncation" FontFamily="{DynamicResource AppFontFamily}" TextColor="{DynamicResource TextSecondaryColor}" />
                             </VerticalStackLayout>
-                            <!-- Empty ring while the item is out, filled with a check once it is in. -->
-                            <Border Grid.Column="2" WidthRequest="24" HeightRequest="24" StrokeThickness="1.5" VerticalOptions="Center" BackgroundColor="Transparent" Stroke="{DynamicResource PopupBorderColor}">
-                                <Border.StrokeShape>
-                                    <RoundRectangle CornerRadius="12" />
-                                </Border.StrokeShape>
-                                <Border.Triggers>
-                                    <DataTrigger TargetType="Border" Binding="{Binding IsSelected}" Value="True">
-                                        <Setter Property="BackgroundColor" Value="{DynamicResource PrimaryColor}" />
-                                        <Setter Property="Stroke" Value="Transparent" />
-                                    </DataTrigger>
-                                </Border.Triggers>
-                                <Label Text="{x:Static controls:SheetGlyphs.Check}" FontFamily="MaterialIcons" FontSize="16" HorizontalOptions="Center" VerticalOptions="Center"
-                                       TextColor="{DynamicResource OnPrimaryColor}" IsVisible="{Binding IsSelected}" />
-                            </Border>
+                            <controls:SheetCheck Grid.Column="2" IsChecked="{Binding IsSelected}" />
                         </Grid>
                     </DataTemplate>
                 </BindableLayout.ItemTemplate>

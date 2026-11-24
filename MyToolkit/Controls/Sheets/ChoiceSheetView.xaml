@@ -5,7 +5,6 @@
              x:Class="MyToolkit.Controls.Sheets.ChoiceSheetView"
              x:DataType="controls:ChoiceSheetViewModel">
 
-    <!-- OnPrimaryColor is put in Resources by SheetContentView (palette-derived). -->
     <VerticalStackLayout Spacing="8" Padding="0,0,0,8">
         <Label Text="{Binding Subtitle}" IsVisible="{Binding HasSubtitle}" FontSize="13" Margin="0,0,0,2" FontFamily="{DynamicResource AppFontFamily}" TextColor="{DynamicResource TextSecondaryColor}" />
 
@@ -26,15 +25,7 @@
                             <TapGestureRecognizer Command="{Binding Command}" />
                         </Border.GestureRecognizers>
                         <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
-                            <Border WidthRequest="36" HeightRequest="36" StrokeThickness="0" VerticalOptions="Center" IsVisible="{Binding HasBadge}" BackgroundColor="{DynamicResource BackgroundSecondaryColor}">
-                                <Border.StrokeShape>
-                                    <RoundRectangle CornerRadius="10" />
-                                </Border.StrokeShape>
-                                <Grid>
-                                    <Label Text="{Binding Badge}" IsVisible="{Binding BadgeIsIcon}" FontFamily="MaterialIcons" FontSize="20" HorizontalOptions="Center" VerticalOptions="Center" TextColor="{DynamicResource TextColor}" />
-                                    <Label Text="{Binding Badge}" IsVisible="{Binding BadgeIsText}" FontSize="13" HorizontalOptions="Center" VerticalOptions="Center" FontFamily="{DynamicResource AppSemiBoldFamily}" TextColor="{DynamicResource TextColor}" />
-                                </Grid>
-                            </Border>
+                            <controls:SheetBadge Badge="{Binding Badge}" IsIcon="{Binding BadgeIsIcon}" Size="36" />
                             <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="1">
                                 <Label Text="{Binding Title}" FontSize="16" MaxLines="1" LineBreakMode="TailTruncation" FontFamily="{DynamicResource AppFontFamily}" TextColor="{DynamicResource TextColor}">
                                     <Label.Triggers>
@@ -45,20 +36,7 @@
                                 </Label>
                                 <Label Text="{Binding Detail}" IsVisible="{Binding HasDetail}" FontSize="12" MaxLines="1" LineBreakMode="TailTruncation" FontFamily="{DynamicResource AppFontFamily}" TextColor="{DynamicResource TextSecondaryColor}" />
                             </VerticalStackLayout>
-                            <!-- Empty ring, filled with a check for the current choice. -->
-                            <Border Grid.Column="2" WidthRequest="24" HeightRequest="24" StrokeThickness="1.5" VerticalOptions="Center" BackgroundColor="Transparent" Stroke="{DynamicResource PopupBorderColor}">
-                                <Border.StrokeShape>
-                                    <RoundRectangle CornerRadius="12" />
-                                </Border.StrokeShape>
-                                <Border.Triggers>
-                                    <DataTrigger TargetType="Border" Binding="{Binding IsSelected}" Value="True">
-                                        <Setter Property="BackgroundColor" Value="{DynamicResource PrimaryColor}" />
-                                        <Setter Property="Stroke" Value="Transparent" />
-                                    </DataTrigger>
-                                </Border.Triggers>
-                                <Label Text="{x:Static controls:SheetGlyphs.Check}" FontFamily="MaterialIcons" FontSize="16" HorizontalOptions="Center" VerticalOptions="Center"
-                                       TextColor="{DynamicResource OnPrimaryColor}" IsVisible="{Binding IsSelected}" />
-                            </Border>
+                            <controls:SheetCheck Grid.Column="2" IsChecked="{Binding IsSelected}" />
                         </Grid>
                     </Border>
                 </DataTemplate>
