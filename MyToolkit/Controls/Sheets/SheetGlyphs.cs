@@ -6,4 +6,6 @@ public static class SheetGlyphs
     public const string Check = "";
 
     public const string Refresh = "";
+
+    public const string Add = "";
 }
