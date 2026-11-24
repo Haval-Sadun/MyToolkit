@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<controls:SheetContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:controls="clr-namespace:MyToolkit.Controls.Sheets"
+             x:Class="MyToolkit.Controls.Sheets.ChipSheetView"
+             x:DataType="controls:ChoiceSheetViewModel">
+
+    <!-- OnPrimaryColor is put in Resources by SheetContentView (palette-derived). -->
+    <VerticalStackLayout Spacing="14" Padding="0,0,0,8">
+        <Label Text="{Binding Subtitle}" IsVisible="{Binding HasSubtitle}" FontSize="13" FontFamily="{DynamicResource AppFontFamily}" TextColor="{DynamicResource TextSecondaryColor}" />
+
+        <!-- Short choices (speeds, durations) as chips: all visible at once, one tap. -->
+        <FlexLayout Wrap="Wrap" JustifyContent="Start" BindableLayout.ItemsSource="{Binding Rows}">
+            <BindableLayout.ItemTemplate>
+                <DataTemplate x:DataType="controls:ChoiceRow">
+                    <Border HeightRequest="44" MinimumWidthRequest="76" StrokeThickness="1" Padding="16,0" Margin="0,0,8,8" BackgroundColor="Transparent" Stroke="{DynamicResource PopupBorderColor}">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="22" />
+                        </Border.StrokeShape>
+                        <Border.Triggers>
+                            <DataTrigger TargetType="Border" Binding="{Binding IsSelected}" Value="True">
+                                <Setter Property="BackgroundColor" Value="{DynamicResource PrimaryColor}" />
+                                <Setter Property="Stroke" Value="Transparent" />
+                            </DataTrigger>
+                        </Border.Triggers>
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding Command}" />
+                        </Border.GestureRecognizers>
+                        <Label Text="{Binding Title}" FontSize="15" HorizontalOptions="Center" VerticalOptions="Center" FontFamily="{DynamicResource AppSemiBoldFamily}" TextColor="{DynamicResource TextColor}">
+                            <Label.Triggers>
+                                <DataTrigger TargetType="Label" Binding="{Binding IsSelected}" Value="True">
+                                    <Setter Property="TextColor" Value="{DynamicResource OnPrimaryColor}" />
+                                </DataTrigger>
+                            </Label.Triggers>
+                        </Label>
+                    </Border>
+                </DataTemplate>
+            </BindableLayout.ItemTemplate>
+        </FlexLayout>
+    </VerticalStackLayout>
+</controls:SheetContentView>

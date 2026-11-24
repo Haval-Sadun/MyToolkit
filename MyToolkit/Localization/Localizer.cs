@@ -6,6 +6,9 @@ namespace MyToolkit.Localization;
 /// <summary>Looks up UI text by key in the app's resource files, for the current UI culture. Platform-free; XAML reaches it through <see cref="LocalizeExtension"/>.</summary>
 public static class Localizer
 {
+    /// <summary>"1 song" or "3 songs": the one-key text for a count of 1, the many-key text otherwise; the count is its argument.</summary>
+    public static string Plural(int count, string oneKey, string manyKey) => Format(count == 1 ? oneKey : manyKey, count);
+
     private static ResourceManager? _manager;
     private static ResourceManager? _variant;
 
