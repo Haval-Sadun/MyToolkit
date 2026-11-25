@@ -9,21 +9,32 @@ namespace MyToolkit.Services;
 /// Rolling file logger: <c>{AppDataDirectory}/logs/app.log</c> (1 MB x 3, INFO/WARN/ERROR) plus a persistent
 /// <c>errors.log</c> with full error blocks. Writes happen on a background consumer; never throws.
 /// </summary>
-public class AppLogger : IDisposable
+public partial class AppLogger : IDisposable
 {
     private const int BreadcrumbCapacity = 100;
     private const int ErrorBreadcrumbCount = 50;
 
     private readonly string _logDir;
     private readonly string _appVersion;
-    private readonly SizeRotatingFile _rolling;
-    private readonly ErrorLogFile _errors;
-    private readonly ErrorRepeatGuard _guard;
-    private readonly LogWriter _writer;
+    private readonly SizeRotatingFile? _rolling;
+    private readonly ErrorLogFile? _errors;
+    private readonly ErrorRepeatGuard? _guard;
+    private readonly LogWriter? _writer;
 
-    public AppLogger()
+#if !MAUI_PLATFORM
+    /// <summary>For a subclass that handles every entry itself (a test double): no files are made. The platform builds have a public parameterless constructor instead (<c>AppLogger.Maui.cs</c>).</summary>
+    protected AppLogger()
     {
-        _logDir = Path.Combine(FileSystem.AppDataDirectory, "logs");
+        _logDir = string.Empty;
+        _appVersion = string.Empty;
+        SessionId = string.Empty;
+    }
+#endif
+
+    /// <summary>Logs under <paramref name="logDirectory"/>; <paramref name="os"/> and <paramref name="device"/> go into the session header.</summary>
+    public AppLogger(string logDirectory, string os, string device)
+    {
+        _logDir = logDirectory;
         SessionId = LogSession.NewId();
         _appVersion = AppVersionSource.Current;
         Func<DateTimeOffset> now = () => DateTimeOffset.Now;
@@ -35,8 +46,6 @@ public class AppLogger : IDisposable
 
         _writer.PersistentWarnPrefixes = ["db.", "catalogue.parse.suspect", "app.exit"];
         DeleteLegacyFiles();
-        var os = $"{Safe(() => DeviceInfo.Current.Platform.ToString())} {Safe(() => DeviceInfo.Current.VersionString)}";
-        var device = $"{Safe(() => DeviceInfo.Current.Manufacturer)} {Safe(() => DeviceInfo.Current.Model)}";
         _writer.WriteHeader(LogEntryFormatter.FormatSessionHeader(now(), SessionId, _appVersion, os, device));
     }
 
@@ -46,16 +55,16 @@ public class AppLogger : IDisposable
     public string SessionId { get; }
 
     /// <summary>Path of the persistent error file.</summary>
-    public string ErrorLogPath => _errors.FilePath;
+    public string ErrorLogPath => _errors?.FilePath ?? string.Empty;
 
     /// <summary>Existing rolling files, oldest first.</summary>
-    public IReadOnlyList<string> RollingLogPaths => _rolling.Files;
+    public IReadOnlyList<string> RollingLogPaths => _rolling?.Files ?? [];
 
-    public void Log(string level, string message)
+    public virtual void Log(string level, string message)
     {
         try
         {
-            System.Diagnostics.Debug.WriteLine(_writer.WriteLine(level, message));
+            System.Diagnostics.Debug.WriteLine(_writer!.WriteLine(level, message));
         }
         catch
         {
@@ -64,36 +73,36 @@ public class AppLogger : IDisposable
     }
 
     /// <summary>Blocks until queued entries are on disk (default 2 s); use before a crash exit or app pause.</summary>
-    public bool Flush(TimeSpan? timeout = null) => _writer.Flush(timeout ?? TimeSpan.FromSeconds(2));
+    public bool Flush(TimeSpan? timeout = null) => _writer?.Flush(timeout ?? TimeSpan.FromSeconds(2)) ?? true;
 
     public void Dispose()
     {
-        _writer.Dispose();
+        _writer?.Dispose();
         GC.SuppressFinalize(this);
     }
 
     /// <summary>Logs an informational message (level <c>INFO</c>).</summary>
-    public void LogInfo(string message) => Log("INFO", message);
+    public virtual void LogInfo(string message) => Log("INFO", message);
 
     /// <summary>Logs a warning message (level <c>WARN</c>).</summary>
-    public void LogWarning(string message) => Log("WARN", message);
+    public virtual void LogWarning(string message) => Log("WARN", message);
 
     /// <summary>Logs an exception: a full block (stack, inner exceptions, recent lines) to errors.log, deduplicated per minute.</summary>
-    public void LogException(Exception ex, string context)
+    public virtual void LogException(Exception ex, string context)
     {
         try
         {
             var summary = $"{context}: {ex.GetType().Name}: {ex.Message}";
             System.Diagnostics.Debug.WriteLine($"[ERROR] {summary}");
             var key = $"{EventName(context)}|{ex.GetType().FullName}|{FirstLine(ex.Message)}";
-            var decision = _guard.Check(key);
+            var decision = _guard!.Check(key);
             if (!decision.Write)
             {
-                _writer.WriteLine("ERROR", $"(repeat suppressed) {summary}");
+                _writer!.WriteLine("ERROR", $"(repeat suppressed) {summary}");
                 return;
             }
 
-            var crumbs = _writer.Breadcrumbs.Snapshot();
+            var crumbs = _writer!.Breadcrumbs.Snapshot();
             if (crumbs.Count > ErrorBreadcrumbCount)
                 crumbs = crumbs.Skip(crumbs.Count - ErrorBreadcrumbCount).ToList();
             var block = LogEntryFormatter.FormatErrorBlock(DateTimeOffset.Now, SessionId, _appVersion, context, ex, crumbs, decision.SuppressedBefore);
@@ -106,7 +115,7 @@ public class AppLogger : IDisposable
     }
 
     /// <summary>Logs a backend API error envelope (level <c>WARN</c>).</summary>
-    public void LogApiError(IApiError error, string context)
+    public virtual void LogApiError(IApiError error, string context)
         => Log("WARN", $"{context}: [{error.StatusCode}] {error.ErrorCode ?? "ERROR"}: {error.Message}");
 
     // "name key=value ..." contexts differ per occurrence; only the name identifies the failing place.
@@ -124,18 +133,6 @@ public class AppLogger : IDisposable
     {
         var end = text.AsSpan().IndexOfAny('\r', '\n');
         return end < 0 ? text : text[..end];
-    }
-
-    private static string Safe(Func<string?> read)
-    {
-        try
-        {
-            return read() ?? "unknown";
-        }
-        catch
-        {
-            return "unknown";
-        }
     }
 
     // Old per-day files (app-yyyyMMdd.log) are replaced by the size-rotated set.

@@ -12,7 +12,11 @@ public static class AppVersionSource
         {
             try
             {
+                #if MAUI_PLATFORM
                 return Override?.Invoke() ?? AppInfo.Current.VersionString;
+#else
+                return Override?.Invoke() ?? "unknown";
+#endif
             }
             catch
             {

@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **MyToolkit** is a shared MAUI class library consumed by sibling apps (`KurdishConnect`, `SyriaBet.Mobile`, `SyriaBet.Admin`) via `<ProjectReference>`. It contains reusable base classes, services, and controls — no app-specific business logic, no authentication/current-user coupling, no hardcoded UI strings.
 
-Target frameworks: `net10.0-android`, `net10.0-ios`, `net10.0-maccatalyst`, `net10.0-windows10.0.19041.0`.
+Target frameworks: `net11.0-android`, `net11.0-ios`, `net11.0-maccatalyst`, `net11.0-windows10.0.19041.0`, and a platform-free `net11.0` (no MAUI): it compiles only the files listed in `PlatformFree.props` (each needs no MAUI type), so a plain `net11.0` project such as ZagrosTune.Core can use them and be unit-tested. A new file is MAUI-only until it is added to that list; `AppLogger`, `ServiceHelper` and `AppVersionSource` work in both (their MAUI parts sit under `#if MAUI_PLATFORM` / `AppLogger.Maui.cs`; a test double derives from `AppLogger` through its protected constructor, and the platform-free `ServiceHelper` is given its container with `ServiceHelper.Use`). One package, one id: the `net11.0` build is just another target of `Haval.MyToolkit`.
 
 ## Build commands
 
@@ -20,7 +20,7 @@ There is no solution file in this directory. The library is built as part of eac
 dotnet build <consuming-app>.sln
 ```
 
-There are no tests in this library — validation is done by building and running consuming apps. Exception: the platform-free `Services/Concurrency/` and `Collections/` types (and `INetworkStatus`) are unit-tested by ZagrosTune's test project, which links their source files directly.
+There are no tests in this library — validation is done by building and running consuming apps. Exception: everything in the platform-free `net11.0` build is unit-tested through ZagrosTune's test project (ZagrosTune.Core references this library).
 
 ## Architecture
 
