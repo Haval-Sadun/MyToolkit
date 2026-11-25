@@ -278,7 +278,8 @@ public sealed class SegmentedControl : ContentView
         _ = FinishAsync(_movers, _panned?.Width ?? 1, dx);
     }
 
-    private bool IsRightToLeft => ((IView)this).FlowDirection == FlowDirection.RightToLeft;
+    // The app's chosen reading direction: a view's own FlowDirection is "inherit" and says nothing about it.
+    private static bool IsRightToLeft => Direction.IsRightToLeft;
 
     /// <summary>The segment a drag of this sign leads to, or null when there is none that way. Dragging left reveals what is to the right: the second segment (the other way round in a right-to-left layout).</summary>
     private int? TargetFor(double dx)

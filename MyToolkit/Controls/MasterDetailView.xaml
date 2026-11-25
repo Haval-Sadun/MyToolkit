@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:tk="clr-namespace:MyToolkit.Controls"
+             x:Class="MyToolkit.Controls.MasterDetailView">
+
+    <!-- Narrow: the master alone. Wide: the master on the start side and the detail beside it; the code-behind sets the two column widths. Symmetric paddings only: a Thickness is physical, so an asymmetric one would sit on the wrong side in a right-to-left layout. -->
+    <ContentView.Content>
+        <Grid x:Name="Layout" ColumnDefinitions="*,0">
+            <ContentView x:Name="MasterHost" Grid.Column="0" />
+
+            <Grid x:Name="DetailArea" Grid.Column="1" RowDefinitions="Auto,*" IsVisible="False">
+                <BoxView x:Name="Divider" WidthRequest="1" HorizontalOptions="Start" Grid.RowSpan="2" />
+
+                <Grid x:Name="DetailHeader" Grid.Row="0" ColumnDefinitions="Auto,*" ColumnSpacing="4" Padding="12,8" MinimumHeightRequest="56">
+                    <tk:IconButton x:Name="BackButton" Grid.Column="0" GlyphSize="24" WidthRequest="44" HeightRequest="44" VerticalOptions="Center" IsVisible="False" Clicked="OnBackClicked" />
+                    <Label x:Name="DetailTitle" Grid.Column="1" FontSize="22" FontFamily="OpenSansSemibold" VerticalOptions="Center" MaxLines="1" LineBreakMode="TailTruncation" />
+                </Grid>
+
+                <ContentView x:Name="DetailHost" Grid.Row="1" />
+
+                <!-- A busy detail (a clean-up running) dims its own side only. -->
+                <Grid x:Name="Scrim" Grid.RowSpan="2" IsVisible="False" BackgroundColor="#80000000">
+                    <ActivityIndicator x:Name="Spinner" WidthRequest="48" HeightRequest="48" HorizontalOptions="Center" VerticalOptions="Center" />
+                </Grid>
+            </Grid>
+        </Grid>
+    </ContentView.Content>
+</ContentView>

@@ -25,6 +25,9 @@ public sealed class SettingsRow : ContentView
     /// <summary>With <see cref="ShowChevron"/>: the row opens a bottom sheet, so its arrow points down instead of to the side.</summary>
     public static readonly BindableProperty OpensSheetProperty = BindableProperty.Create(nameof(OpensSheet), typeof(bool), typeof(SettingsRow), false, propertyChanged: (b, _, _) => ((SettingsRow)b).UpdateChevron());
 
+    /// <summary>The row is the one open in a master-detail layout: it keeps a tinted background.</summary>
+    public static readonly BindableProperty IsSelectedProperty = BindableProperty.Create(nameof(IsSelected), typeof(bool), typeof(SettingsRow), false, propertyChanged: (b, _, _) => ((SettingsRow)b).ApplySelection());
+
     public static readonly BindableProperty IsDestructiveProperty = BindableProperty.Create(nameof(IsDestructive), typeof(bool), typeof(SettingsRow), false, propertyChanged: (b, _, _) => ((SettingsRow)b).ApplyTone());
 
     public static readonly BindableProperty ShowSwitchProperty = BindableProperty.Create(nameof(ShowSwitch), typeof(bool), typeof(SettingsRow), false, propertyChanged: (b, _, v) => ((SettingsRow)b)._switch.IsVisible = (bool)v);
@@ -161,6 +164,12 @@ public sealed class SettingsRow : ContentView
         set => SetValue(ShowChevronProperty, value);
     }
 
+    public bool IsSelected
+    {
+        get => (bool)GetValue(IsSelectedProperty);
+        set => SetValue(IsSelectedProperty, value);
+    }
+
     public bool OpensSheet
     {
         get => (bool)GetValue(OpensSheetProperty);
@@ -248,11 +257,24 @@ public sealed class SettingsRow : ContentView
             _root.BackgroundColor = onSurface.WithAlpha(0.08f);
     }
 
-    private void OnPointerUp(object? sender, PointerEventArgs e) => _root.BackgroundColor = Colors.Transparent;
+    private void OnPointerUp(object? sender, PointerEventArgs e) => ApplySelection();
+
+    // The resting background: tinted while selected (following light and dark), otherwise clear. RemoveBinding first, as FilterChip does, or the tint would come back on the next theme switch.
+    private void ApplySelection()
+    {
+        if (IsSelected && ThemeColors.Get("SecondaryContainerLight") is { } light && ThemeColors.Get("SecondaryContainerDark") is { } dark)
+        {
+            _root.SetAppThemeColor(BackgroundColorProperty, light, dark);
+            return;
+        }
+
+        _root.RemoveBinding(BackgroundColorProperty);
+        _root.BackgroundColor = Colors.Transparent;
+    }
 
     private void OnTapped(object? sender, TappedEventArgs e)
     {
-        _root.BackgroundColor = Colors.Transparent;
+        ApplySelection();
         if (ShowSwitch)
         {
             _switch.IsToggled = !_switch.IsToggled;
