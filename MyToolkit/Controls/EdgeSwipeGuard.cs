@@ -35,6 +35,10 @@ public static class EdgeSwipeGuard
     /// <summary>Whether the last touch went down in the system gesture strip at either edge.</summary>
     public static bool StartedAtEdge()
     {
+        // The system gesture insets exist from Android 10 (API 29).
+        if (!OperatingSystem.IsAndroidVersionAtLeast(29))
+            return false;
+
         if (_downX < 0 || Microsoft.Maui.ApplicationModel.Platform.CurrentActivity is not { } activity || activity.Resources?.DisplayMetrics is not { } metrics)
             return false;
 

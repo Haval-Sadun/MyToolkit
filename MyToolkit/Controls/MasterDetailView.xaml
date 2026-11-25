@@ -6,7 +6,7 @@
 
     <!-- Narrow: the master alone. Wide: the master on the start side and the detail beside it; the code-behind sets the two column widths. Symmetric paddings only: a Thickness is physical, so an asymmetric one would sit on the wrong side in a right-to-left layout. -->
     <ContentView.Content>
-        <Grid x:Name="Layout" ColumnDefinitions="*,0">
+        <Grid x:Name="Columns" ColumnDefinitions="*,0">
             <ContentView x:Name="MasterHost" Grid.Column="0" />
 
             <Grid x:Name="DetailArea" Grid.Column="1" RowDefinitions="Auto,*" IsVisible="False">

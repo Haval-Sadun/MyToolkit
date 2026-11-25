@@ -175,8 +175,8 @@ public partial class MasterDetailView : ContentView
             return;
 
         var wide = Width >= WideFrom;
-        Layout.ColumnDefinitions[0].Width = wide ? new GridLength(Math.Clamp(Width * MasterShare, MasterMinWidth, MasterMaxWidth)) : GridLength.Star;
-        Layout.ColumnDefinitions[1].Width = wide ? GridLength.Star : new GridLength(0);
+        Columns.ColumnDefinitions[0].Width = wide ? new GridLength(Math.Clamp(Width * MasterShare, MasterMinWidth, MasterMaxWidth)) : GridLength.Star;
+        Columns.ColumnDefinitions[1].Width = wide ? GridLength.Star : new GridLength(0);
     }
 
     // The top screen: its title, the back arrow when there is a screen under it, its view (scrolling or not), and its busy state.

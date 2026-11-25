@@ -111,8 +111,8 @@ public abstract class ToolkitPage : ContentPage
         base.OnAppearing();
         Lifecycle?.OnAppearing();
 #if IOS
-        // Single global iOS safe-area enable — insets content below the notch / home indicator.
-        On<iOS>().SetUseSafeArea(ApplySafeArea);
+        // Single global iOS safe-area switch — insets content below the notch / home indicator.
+        SafeAreaEdges = ApplySafeArea ? SafeAreaEdges.Container : SafeAreaEdges.None;
 #endif
 #if ANDROID
         StartAndroidInsetHandling();

@@ -14,8 +14,7 @@ public sealed partial class TabBadgeService
             var window = UIApplication.SharedApplication.ConnectedScenes
                 .OfType<UIWindowScene>()
                 .SelectMany(s => s.Windows)
-                .FirstOrDefault(w => w.IsKeyWindow)
-                ?? UIApplication.SharedApplication.KeyWindow;
+                .FirstOrDefault(w => w.IsKeyWindow);
 
             var tabController = FindTabBarController(window?.RootViewController);
             if (tabController?.TabBar?.Items is not { } items) return;
