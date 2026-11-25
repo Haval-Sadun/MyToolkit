@@ -22,6 +22,9 @@ public sealed class SettingsRow : ContentView
 
     public static readonly BindableProperty ShowChevronProperty = BindableProperty.Create(nameof(ShowChevron), typeof(bool), typeof(SettingsRow), false, propertyChanged: (b, _, v) => ((SettingsRow)b)._chevron.IsVisible = (bool)v);
 
+    /// <summary>With <see cref="ShowChevron"/>: the row opens a bottom sheet, so its arrow points down instead of to the side.</summary>
+    public static readonly BindableProperty OpensSheetProperty = BindableProperty.Create(nameof(OpensSheet), typeof(bool), typeof(SettingsRow), false, propertyChanged: (b, _, _) => ((SettingsRow)b).UpdateChevron());
+
     public static readonly BindableProperty IsDestructiveProperty = BindableProperty.Create(nameof(IsDestructive), typeof(bool), typeof(SettingsRow), false, propertyChanged: (b, _, _) => ((SettingsRow)b).ApplyTone());
 
     public static readonly BindableProperty ShowSwitchProperty = BindableProperty.Create(nameof(ShowSwitch), typeof(bool), typeof(SettingsRow), false, propertyChanged: (b, _, v) => ((SettingsRow)b)._switch.IsVisible = (bool)v);
@@ -31,6 +34,9 @@ public sealed class SettingsRow : ContentView
     public static readonly BindableProperty CommandProperty = BindableProperty.Create(nameof(Command), typeof(ICommand), typeof(SettingsRow));
 
     private const string ChevronRight = "";
+    /// <summary>The arrow of a row that opens a bottom sheet: down, since the sheet rises over the page.</summary>
+    private const string ChevronDown = "";
+
     private const string ChevronLeft = "";
 
     private readonly Grid _root;
@@ -50,8 +56,10 @@ public sealed class SettingsRow : ContentView
     protected override void OnSizeAllocated(double width, double height)
     {
         base.OnSizeAllocated(width, height);
-        _chevron.Text = ((IVisualElementController)this).EffectiveFlowDirection.HasFlag(EffectiveFlowDirection.RightToLeft) ? ChevronLeft : ChevronRight;
+        UpdateChevron();
     }
+
+    private void UpdateChevron() => _chevron.Text = OpensSheet ? ChevronDown : ((IVisualElementController)this).EffectiveFlowDirection.HasFlag(EffectiveFlowDirection.RightToLeft) ? ChevronLeft : ChevronRight;
 
     public SettingsRow()
     {
@@ -151,6 +159,12 @@ public sealed class SettingsRow : ContentView
     {
         get => (bool)GetValue(ShowChevronProperty);
         set => SetValue(ShowChevronProperty, value);
+    }
+
+    public bool OpensSheet
+    {
+        get => (bool)GetValue(OpensSheetProperty);
+        set => SetValue(OpensSheetProperty, value);
     }
 
     public bool IsDestructive
