@@ -11,7 +11,11 @@ public sealed class ImageDiskCache(HttpClient http, string folder, long maxBytes
     private static readonly TimeSpan DownloadTimeout = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan TouchEvery = TimeSpan.FromHours(1);
 
+    // A list switch asks for dozens of covers at once; fetching and shrinking a few at a time keeps the memory flat.
+    private const int MaxParallel = 4;
+
     private readonly ConcurrentDictionary<string, Task> _downloads = new();
+    private readonly SemaphoreSlim _gate = new(MaxParallel);
     private readonly object _trimLock = new();
 
     /// <summary>The local file for <paramref name="url"/> when it was downloaded before, else null.</summary>
@@ -61,7 +65,15 @@ public sealed class ImageDiskCache(HttpClient http, string folder, long maxBytes
         {
             try
             {
-                await DownloadAsync(url, path).ConfigureAwait(false);
+                await _gate.WaitAsync().ConfigureAwait(false);
+                try
+                {
+                    await DownloadAsync(url, path).ConfigureAwait(false);
+                }
+                finally
+                {
+                    _gate.Release();
+                }
             }
             catch (Exception ex)
             {

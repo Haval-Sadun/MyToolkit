@@ -107,6 +107,26 @@ public partial class MasterDetailView : ContentView
         pane.ViewModel?.OnAppearing();
     }
 
+    /// <summary>Replaces every screen above the root with this one, rendering once: the root is never shown in between (rebuilding it only to cover it again is wasted work and tears a big subtree down at once). With only the root present it is the same as <see cref="Push"/>.</summary>
+    public void ReplaceAboveRoot(DetailPane pane)
+    {
+        if (_stack.Count <= 1)
+        {
+            Push(pane);
+            return;
+        }
+
+        for (var i = _stack.Count - 1; i >= 1; i--)
+        {
+            Release(_stack[i]);
+            _stack.RemoveAt(i);
+        }
+
+        _stack.Add(pane);
+        Render();
+        pane.ViewModel?.OnAppearing();
+    }
+
     /// <summary>Back to the screen under the top one. False when only the root is left.</summary>
     public bool Pop()
     {
