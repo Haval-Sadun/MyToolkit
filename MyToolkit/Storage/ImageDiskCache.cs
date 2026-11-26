@@ -5,9 +5,9 @@ using System.Text;
 namespace MyToolkit.Storage;
 
 /// <summary>Keeps downloaded images as files named after their URL, so an image about to be shown (the next song's cover) is already on disk when it is needed. The oldest files go first once the folder passes its size cap. Platform-free; <see cref="PrefetchAsync"/> never throws.</summary>
-public sealed class ImageDiskCache(HttpClient http, string folder, long maxBytes, Action<string>? warn = null)
+public sealed class ImageDiskCache(HttpClient http, string folder, long maxBytes, Action<string>? warn = null, Func<string, Task>? shrink = null)
 {
-    private const long MaxImageBytes = 3 * 1024 * 1024;
+    private const long MaxImageBytes = 8 * 1024 * 1024;
     private static readonly TimeSpan DownloadTimeout = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan TouchEvery = TimeSpan.FromHours(1);
 
@@ -102,6 +102,7 @@ public sealed class ImageDiskCache(HttpClient http, string folder, long maxBytes
                 }
             }
 
+            await ShrinkAsync(temp).ConfigureAwait(false);
             File.Move(temp, path, overwrite: true);
             Trim();
         }
@@ -114,6 +115,22 @@ public sealed class ImageDiskCache(HttpClient http, string folder, long maxBytes
         {
             TryDelete(temp);
             _downloads.TryRemove(path, out _);
+        }
+    }
+
+    // A cover decodes at full size on some platforms: the hook shrinks the file in place; a failure keeps the original.
+    private async Task ShrinkAsync(string file)
+    {
+        if (shrink is null)
+            return;
+
+        try
+        {
+            await shrink(file).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            warn?.Invoke($"image cache: could not shrink a cover ({ex.GetType().Name}).");
         }
     }
 
