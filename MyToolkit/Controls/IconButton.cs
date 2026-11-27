@@ -3,9 +3,16 @@ using MyToolkit.Theme;
 namespace MyToolkit.Controls;
 
 /// <summary>Font-glyph button with visible press feedback (dim + shrink) — replaces Label + TapGestureRecognizer, which gives none.</summary>
-/// <remarks>An ImageButton, so it also gets a real button role, keyboard focus and Command-driven IsEnabled. The press dim is relative and restored
-/// afterwards, so callers can still dim via triggers. Generic, no app types.</remarks>
+/// <remarks>A real button, so it also gets a button role, keyboard focus and Command-driven IsEnabled. The press dim is relative and restored
+/// afterwards, so callers can still dim via triggers. Generic, no app types.
+/// On Windows it is a Button that draws the glyph as text: an ImageButton's FontImageSource becomes a Win2D CanvasImageSource inside the XAML button,
+/// and releasing one corrupted the native heap (crash 0xc0000374 in CanvasImageSource's destructor when a screen holding glyph buttons was torn down).
+/// Elsewhere it stays an ImageButton.</remarks>
+#if WINDOWS
+public class IconButton : Button
+#else
 public class IconButton : ImageButton
+#endif
 {
     public static readonly BindableProperty GlyphProperty = BindableProperty.Create(nameof(Glyph), typeof(string), typeof(IconButton), string.Empty, propertyChanged: OnGlyphChanged);
 
@@ -30,8 +37,15 @@ public class IconButton : ImageButton
         BackgroundColor = RestingBackground;
         BorderWidth = 0;
         Padding = 0;
+#if WINDOWS
+        // The glyph is text: keep it at GlyphSize whatever the system text scale, with no case change or extra line room.
+        FontAutoScalingEnabled = false;
+        TextTransform = TextTransform.None;
+        LineBreakMode = LineBreakMode.NoWrap;
+#else
         // Center: draws the glyph at GlyphSize instead of stretching it to fill the button.
         Aspect = Aspect.Center;
+#endif
         WidthRequest = 48;
         HeightRequest = 48;
 
@@ -101,9 +115,17 @@ public class IconButton : ImageButton
     private static void OnGlyphChanged(BindableObject bindable, object oldValue, object newValue)
     {
         var button = (IconButton)bindable;
+#if WINDOWS
+        button.Text = button.Glyph;
+        button.FontFamily = button.GlyphFontFamily;
+        button.FontSize = button.GlyphSize;
+        if (button.GlyphColor is { } color)
+            button.TextColor = color;
+#else
         button.Source = string.IsNullOrEmpty(button.Glyph)
             ? null
             : new FontImageSource { Glyph = button.Glyph, FontFamily = button.GlyphFontFamily, Size = button.GlyphSize, Color = button.GlyphColor };
+#endif
     }
 
     private void OnPressed(object? sender, EventArgs e)
